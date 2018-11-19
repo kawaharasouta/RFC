@@ -9,7 +9,9 @@ The internetwork environment consists of hosts connected to networks which are i
 >
 It is assumed here that the networks may be either local networks (e.g., the ETHERNET) or large networks (e.g., the ARPANET), but in any case are based on packet switching technology.  
 
-それは仮定している. ネットワークはethernetのようなローカル(地域的な)ネットワーク or ARPANETのような大きなネットワークどちらかであると. しかし, あるケースでは(ネットワークは)パケット交換技術に帰着?する.
+それは仮定している. ネットワークはethernetのようなローカル(地域的な)ネットワーク or ARPANETのような大きなネットワークどちらかであると. 
+どのケースであってもパケット交換技術がベースにされている.
+(TCPはパケット交換方式ですよということ)
 
 >
 The active agents that produce and consume messages are processes.  
