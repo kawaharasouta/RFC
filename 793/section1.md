@@ -176,7 +176,7 @@ TCPは相互接続されたネットワークの至極一般的な環境で動�
 >As noted above, the primary purpose of the TCP is to provide reliable, securable logical circuit or connection service between pairs of processes.
 
 上記のように, 
-
+TCPの主要な目的は
 
 
 
