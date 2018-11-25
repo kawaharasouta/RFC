@@ -155,7 +155,30 @@ TCPの実装者には, 特定のOS環境に適切であるようなインタフ�
 
 >The interface between TCP and lower level protocol is essentially unspecified except that it is assumed there is a mechanism whereby the two levels can asynchronously pass information to each other.
 
-TCPと下位プロトコル間のインタフェースは
+TCPと下位プロトコル間のインタフェースは本質的には不特定である.
+それによって2つの層が非同期にお互いに情報を交換できるようなメカニズムがあることを除いて.
+(各層は各層に対してオブジェクティブであるが, 情報をやり取りするAPI的なものは持っているということ)
+
+>Typically, one expects the lower level protocol to specify this interface.  
+
+普通, 下位プロトコルがこのインターフェースを特定することを期待している.
+
+>TCP is designed to work in a very general environment of interconnected networks.
+
+TCPは相互接続されたネットワークの至極一般的な環境で動作するように設計されている.
+
+>The lower level protocol which is assumed throughout this document is the Internet Protocol [2].
+
+このドキュメント全体を通して想定されている下位レベルのプロトコルはインターネットプロトコル[2]です.
+
+### 1.5.  Operation
+
+>As noted above, the primary purpose of the TCP is to provide reliable, securable logical circuit or connection service between pairs of processes.
+
+上記のように, 
+
+
+
 
 
 
