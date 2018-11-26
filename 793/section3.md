@@ -47,7 +47,11 @@ TCP Header Format
 
 <div style="text-align: center;">
 TCP Header Format
+</div>
+<div style="text-align: center;">
 Note that one tick mark represents one bit position.
+</div>
+<div style="text-align: center;">
 Figure 3.
 </div>
 
@@ -333,7 +337,7 @@ SEG.PRC - segment precedence value
 
 >The states are: LISTEN, SYN-SENT, SYN-RECEIVED, ESTABLISHED, FIN-WAIT-1, FIN-WAIT-2, CLOSE-WAIT, CLOSING, LASTACK, TIME-WAIT, and the fictional state CLOSED.
 
-ステートの紹介 略
+ステートの紹介
 
 >CLOSED is fictional because it represents the state when there is no TCB, and therefore, no connection.
 
@@ -372,34 +376,113 @@ ESTABLISHED
 
 FIN-WAIT-1
 リモートTCPからのコネクション終了リクエスト or 以前に送信したコネクション終了要求の確認 を待っている
+(appがクローズしてFINを送った状態. アクティブ)
 
 >FIN-WAIT-2 - represents waiting for a connection termination request from the remote TCP.
 
 FIN-WAIT-2
 リモートTCPからのコネクション終了要求を待っている.
+(FIN-WAIT-1 からACKを受信して, その後FINを待っている状態. アクティブ)
 
 >CLOSE-WAIT - represents waiting for a connection termination request from the local user.
 
 CLOSE-WAIT
 ローカルユーザからのコネクション終了要求を待っている.
+(FINを受信しACKを送信した後, appからのクローズを待つ. パッシブ)
 
 >CLOSING - represents waiting for a connection termination request acknowledgment from the remote TCP.
 
 CLOSING
 リモートTCPからのコネクション終了要求の確認応答を待っている.
+(FIN-WAIT-2と若干似ているが, こちらは同時クローズな状態の場合. すなわち, FINを送ってあってACKは受信していないがその前にFINを受信している状態. アクティブ)
 
 >LAST-ACK - represents waiting for an acknowledgment of the connection termination request previously sent to the remote TCP (which includes an acknowledgment of its connection termination request).
 
 LAST-ACK
 リモートTCPに以前に送信されたコネクション終了要求の確認応答（コネクション終了要求の確認応答を含む）を待つことを表す。
+(CLOSE-WAITからappのクローズを受けた後, FINを送ってACKを待っている状態. パッシブ)
 
 >TIME-WAIT - represents waiting for enough time to pass to be sure the remote TCP received the acknowledgment of its connection termination request.
 
-リモートTCPがその接続終了要求の確認応答を受信したことを確実にするのに十分な時間待つことを表す。
+リモートTCPがその接続終了要求の確認応答を受信したことを確実にするのに十分な時間待つことを表す.
+(2MSLのやつ. アクティブ)
 
 >CLOSED - represents no connection state at all.
 
 略
+
+>A TCP connection progresses from one state to another in response to events.
+
+TCPコネクションはあるステートからイベントに反して他の状態へ進行する.
+
+>The events are the user calls, OPEN, SEND, RECEIVE, CLOSE, ABORT, and STATUS; the incoming segments, particularly those containing the SYN, ACK, RST and FIN flags; and timeouts.
+
+略
+
+>The state diagram in figure 6 illustrates only state changes, together with the causing events and resulting actions, but addresses neither error conditions nor actions which are not connected with state changes.
+
+図6のステート図(状態遷移図)は状態の変化のみを きっかけとなるイベントとその結果のアクションとともに 表している, 
+but エラー状態や状態変更に関連しないアクションには対処しない.
+
+>In a later section, more detail is offered with respect
+to the reaction of the TCP to events.
+
+この後のセクションでは, 
+イベントに対するTCPの反応に関してより詳細に表します.
+
+>NOTE BENE:  this diagram is only a summary and must not be taken as the total specification.
+
+この図は要約に過ぎず, 全体の仕様とみなしてはならない.
+
+```
+                            +---------+ ---------\      active OPEN
+                              |  CLOSED |            \    -----------
+                              +---------+<---------\   \   create TCB
+                                |     ^              \   \  snd SYN
+                   passive OPEN |     |   CLOSE        \   \
+                   ------------ |     | ----------       \   \
+                    create TCB  |     | delete TCB         \   \
+                                V     |                      \   \
+                              +---------+            CLOSE    |    \
+                              |  LISTEN |          ---------- |     |
+                              +---------+          delete TCB |     |
+                   rcv SYN      |     |     SEND              |     |
+                  -----------   |     |    -------            |     V
+ +---------+      snd SYN,ACK  /       \   snd SYN          +---------+
+ |         |<-----------------           ------------------>|         |
+ |   SYN   |                    rcv SYN                     |   SYN   |
+ |   RCVD  |<-----------------------------------------------|   SENT  |
+ |         |                    snd ACK                     |         |
+ |         |------------------           -------------------|         |
+ +---------+   rcv ACK of SYN  \       /  rcv SYN,ACK       +---------+
+   |           --------------   |     |   -----------
+   |                  x         |     |     snd ACK
+   |                            V     V
+   |  CLOSE                   +---------+
+   | -------                  |  ESTAB  |
+   | snd FIN                  +---------+
+   |                   CLOSE    |     |    rcv FIN
+   V                  -------   |     |    -------
+ +---------+          snd FIN  /       \   snd ACK          +---------+
+ |  FIN    |<-----------------           ------------------>|  CLOSE  |
+ | WAIT-1  |------------------                              |   WAIT  |
+ +---------+          rcv FIN  \                            +---------+
+   | rcv ACK of FIN   -------   |                            CLOSE  |
+   | --------------   snd ACK   |                           ------- |
+   V        x                   V                           snd FIN V
+ +---------+                  +---------+                   +---------+
+ |FINWAIT-2|                  | CLOSING |                   | LAST-ACK|
+ +---------+                  +---------+                   +---------+
+   |                rcv ACK of FIN |                 rcv ACK of FIN |
+   |  rcv FIN       -------------- |    Timeout=2MSL -------------- |
+   |  -------              x       V    ------------        x       V
+    \ snd ACK                 +---------+delete TCB         +---------+
+     ------------------------>|TIME WAIT|------------------>| CLOSED  |
+                              +---------+                   +---------+
+```
+
+### 3.3.  Sequence Numbers
+
 
 
 
