@@ -140,7 +140,7 @@ The checksum field is the 16 bit one's complement of the one's complement sum of
 >Urgent Pointer: 16 bits
 This field communicates the current value of the urgent pointer as a positive offset from the sequence number in this segment. The urgent pointer points to the sequence number of the octet following the urgent data. This field is only be interpreted in segments with the URG control bit set.
 
-略
+このフィールドは、緊急ポインタの現在の値を、このセグメント内のシーケンス番号からの正のオフセットとして通信します。 緊急ポインタは、緊急データに続くオクテットのシーケンス番号を指し示す。 このフィールドは、URG制御ビットが設定されたセグメントでのみ解釈されます。
 
 >Options: variable
 Options may occupy space at the end of the TCP header and are a multiple of 8 bits in length. All options are included in the checksum. An option may begin on any octet boundary. 
@@ -148,15 +148,17 @@ There are two cases for the format of an option:
 Case 1: A single octet of option-kind.
 Case 2: An octet of option-kind, an octet of option-length, and the actual option-data octets.
 
-略
+オプションは、TCPヘッダーの最後にスペースを占有し、8ビットの倍数です。 すべてのオプションはチェックサムに含まれています。 オプションは任意の八重奏の境界で始まるかもしれません。
+ケース1：option-kindの単一オクテット。
+ケース2：オプション種別のオクテット、オプション長のオクテット、実際のオプションデータオクテット。
 
 >Note that the list of options may be shorter than the data offset field might imply. 
 
-略
+オプションのリストは、データオフセットフィールドが含意するよりも短くてもよいことに注意してください。
 
 >The content of the header beyond the End-of-Option option must be header padding (i.e., zero).
 
-略
+End-of-Optionオプションを越えるヘッダーの内容は、ヘッダーの埋め込み（つまり、ゼロ）でなければなりません。
 
 >A TCP must implement all options.
 
@@ -164,7 +166,7 @@ Case 2: An octet of option-kind, an octet of option-length, and the actual optio
 
 >Currently defined options include (kind indicated in octal):
 
-略
+現在定義されているオプションには、（種類は8進数で表示されます）
 
 ```
 
@@ -191,7 +193,7 @@ Specific Option Definitions
 
 >This option code indicates the end of the option list. This might not coincide with the end of the TCP header according to the Data Offset field. This is used at the end of all options, not the end of each option, and need only be used if the end of the options would not otherwise coincide with the end of the TCP header.
 
-略
+このオプションコードは、オプションリストの終わりを示します。 これは、Data Offsetフィールドに従ってTCPヘッダーの終わりと一致しないことがあります。 これは、各オプションの終わりではなく、すべてのオプションの最後に使用され、オプションの終わりがTCPヘッダーの終わりと一致しない場合にのみ使用する必要があります。
 
 **No-Operation**
 
@@ -207,7 +209,7 @@ Specific Option Definitions
 >This option code may be used between options, for example, to align the beginning of a subsequent option on a word boundary. There is no guarantee that senders will use this option, so receivers must be prepared to process options even if they
 do not begin on a word boundary.
 
-略
+このオプションコードは、オプション間で使用して、後続のオプションの先頭を単語境界に揃えるなどに使用できます。 送信者がこのオプションを使用する保証はないため、受信者は単語の境界で始まらなくてもオプションを処理する準備ができている必要があります。
 
 **Maximum Segment Size**
 
@@ -223,12 +225,12 @@ do not begin on a word boundary.
 >Maximum Segment Size Option Data: 16 bits
 If this option is present, then it communicates the maximum receive segment size at the TCP which sends this segment. This field must only be sent in the initial connection request (i.e., in segments with the SYN control bit set). If this option is not used, any segment size is allowed.
 
-略
+このオプションが存在する場合、このセグメントを送信するTCPで最大受信セグメントサイズを通信します。 このフィールドは、初期接続要求（SYN制御ビットが設定されたセグメント）でのみ送信する必要があります。 このオプションを使用しない場合、セグメントサイズは許されます。
 
 >Padding: variable
 The TCP header padding is used to ensure that the TCP header ends and data begins on a 32 bit boundary. The padding is composed of zeros.
 
-略
+TCPヘッダーパディングは、TCPヘッダーが終了し、データが32ビット境界で始まることを保証するために使用されます。 パディングはゼロで構成されています。
 
 ### 3.2. Terminology (用語)
 
@@ -276,6 +278,7 @@ IRS     - initial receive sequence number
 次の図は いくつかのそれらの変数シーケンススペースに関連付けるのに 役立つだろう.
 
 **Send Sequence Space**
+
 ```
     1          2          3          4
 ----------|----------|----------|----------
@@ -298,6 +301,7 @@ send window は 図4で3とラベル付けされたシーケンススペース�
 (3がsend window です)
 
 **Receive Sequence Space**
+
 ```
     1          2          3
 ----------|----------|----------
@@ -308,6 +312,7 @@ send window は 図4で3とラベル付けされたシーケンススペース�
 2 - sequence numbers allowed for new reception
 3 - future sequence numbers which are not yet allowed
 ```
+
 <div style="text-align: center;">
 Receive Sequence Space
 Figure 5.
@@ -322,12 +327,13 @@ receive window 図5で2とラベル付けされたシーケンススペースの
 また, いくつかの変数が 現在のセグメントのフィールドから値をとるディスカッションに よくつかわれる.
 
 **Current Segment Variables**
+
 ```
-SEG.SEQ - segment sequence number
-SEG.ACK - segment acknowledgment number
-SEG.LEN - segment length
-SEG.WND - segment window
-SEG.UP - segment urgent pointer
+SEG.SEQ - segment sequence number  
+SEG.ACK - segment acknowledgment number  
+SEG.LEN - segment length  
+SEG.WND - segment window  
+SEG.UP  - segment urgent pointer  
 SEG.PRC - segment precedence value
 ```
 
@@ -413,7 +419,7 @@ LAST-ACK
 
 >A TCP connection progresses from one state to another in response to events.
 
-TCPコネクションはあるステートからイベントに反して他の状態へ進行する.
+TCPコネクションはあるステートからイベントに反応して他の状態へ進行する.
 
 >The events are the user calls, OPEN, SEND, RECEIVE, CLOSE, ABORT, and STATUS; the incoming segments, particularly those containing the SYN, ACK, RST and FIN flags; and timeouts.
 
@@ -482,6 +488,12 @@ to the reaction of the TCP to events.
 ```
 
 ### 3.3.  Sequence Numbers
+
+>A fundamental notion in the design is that every octet of data sent over a TCP connection has a sequence number.
+
+設計における基本的な概念は
+TCPコネクションを介して送られるデータの全オクテットがシーケンス番号を持っている.
+
 
 
 
