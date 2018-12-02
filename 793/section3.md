@@ -493,6 +493,16 @@ to the reaction of the TCP to events.
 
 設計における基本的な概念は
 TCPコネクションを介して送られるデータの全オクテットがシーケンス番号を持っている.
+(オクテットごとにシーケンス番号が振られている. みたいな感じ.)
+
+>Since every octet is sequenced, each of them can be acknowledged.
+
+すべてのオクテットがシーケンスされているので、それぞれのオクテットを確認することができます.
+
+>The acknowledgment mechanism employed is cumulative so that an acknowledgment of sequence number X indicates that all octets up to but not including X have been received.
+
+使用されるachnowledgementメカニズムは累積的であり、シーケンス番号Xの確認応答は、Xを含まないすべてのオクテットが受信されたことを示す。
+
 
 
 
