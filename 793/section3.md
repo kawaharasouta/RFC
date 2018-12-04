@@ -503,6 +503,49 @@ TCPコネクションを介して送られるデータの全オクテットが�
 
 使用されるachnowledgementメカニズムは累積的であり、シーケンス番号Xの確認応答は、Xを含まないすべてのオクテットが受信されたことを示す。
 
+>This mechanism allows for straight-forward duplicate detection in the presence of retransmission.
+
+このメカニズムは再送信存在での直接的な重複検査を可能にする. 
+
+>Numbering of octets within a segment is that the first data octet immediately following the header is the lowest numbered, and the following octets are numbered consecutively.
+
+セグメント内のオクテットのナンバリングは, ヘッダ直後のデータが最も低い値であり, 続くオクテットが連続してナンバリングされる.
+
+>It is essential to remember that the actual sequence number space is finite, though very large.
+
+実際のシーケンス番号空間は有限であるということが重要である. 非常に大きいが.
+
+>This space ranges from 0 to 2**32 - 1. 
+
+この(シーケンス番号)空間は 0 ~ 2^32 である.
+
+>Since the space is finite, all arithmetic dealing with sequence numbers must be performed modulo 2**32.
+
+空間は有限であるため, 全ての算術演算は mod 2^32 で実行される必要がある.
+
+>This unsigned arithmetic preserves the relationship of sequence numbers as they cycle from 2**32 - 1 to 0 again.
+
+この符号なし演算は 2^32-1 ~ 0 のサイクルとしてシーケンス番号の関係を保持する.
+
+>There are some subtleties to computer modulo arithmetic, so great care should be taken in programming the comparison of such values.  
+
+コンピュータmod演算にはいくつかの微妙な点があるので, そのような値の比較をプログラムするときには注意が必要です.
+
+>The symbol "=<" means "less than or equal" (modulo 2**32).
+
+"=<" は (mod 2^32での) "以下" を意味する.
+
+>The typical kinds of sequence number comparisons which the TCP must perform include
+
+TCPが実行しなければならないシーケンス番号比較の典型的な種類は(下に記述)
+
+>(a) Determining that an acknowledgment refers to some sequence number sent but not yet acknowledged.  
+>(b) Determining that all sequence numbers occupied by a segment have been acknowledged (e.g., to remove the segment from a retransmission queue).  
+>(c) Determining that an incoming segment contains sequence numbers which are expected (i.e., that the segment "overlaps" the receive window).
+
+(a)  
+
+
 
 
 
