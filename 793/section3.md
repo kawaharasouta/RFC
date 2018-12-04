@@ -544,7 +544,8 @@ TCPが実行しなければならないシーケンス番号比較の典型的�
 >(c) Determining that an incoming segment contains sequence numbers which are expected (i.e., that the segment "overlaps" the receive window).
 
 (a)  
-
+(b) 
+(c) 
 
 
 
