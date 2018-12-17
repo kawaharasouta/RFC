@@ -912,8 +912,7 @@ or
 
 >Assume that two user processes A and B are communicating with one another when a crash occurs causing loss of memory to A's TCP.
 
-???
-
+2つのユーザプロセスAとBが互いに通信シアていて, AのTCPでメモリ不足が原因で破棄が発生したとする.
 
 >Depending on the operating system supporting A's TCP, it is likely that some error recovery mechanism exists.
 
@@ -1064,14 +1063,38 @@ Old Duplicate SYN Initiates a Reset on two Passive Sockets  Figure 12.
 
 >As a general rule, reset (RST) must be sent whenever a segment arrives which apparently is not intended for the current connection.
 
-
+一般的には、現在の接続を意図していないセグメントが到着するたびに、リセット（RST）を送信する必要があります。
 
 >A reset must not be sent if it is not clear that this is the case.
 
-
+このようなケースがはっきりしない場合は、リセットを送信してはなりません。
 
 
 >There are three groups of states:
+
+
+
+>1. If the connection does not exist (CLOSED) then a reset is sent in response to any incoming segment except another reset.  In particular, SYNs addressed to a non-existent connection are rejected by this means.
+
+接続が存在しない場合（CLOSED）、別のリセット以外の着信セグメントに応答してリセットが送信されます。 特に、存在しない接続に宛てられたSYNは、この手段によって拒否されます。
+
+>If the incoming segment has an ACK field, the reset takes its sequence number from the ACK field of the segment, otherwise the reset has sequence number zero and the ACK field is set to the sum of the sequence number and segment length of the incoming segment.
+
+着信セグメントがACKフィールドを有する場合、リセットはセグメントのACKフィールドからそのシーケンス番号をとり、そうでなければリセットはシーケンス番号0を有し、ACKフィールドは着信セグメントのシーケンス番号とセグメント長の合計に設定される 。
+
+>The connection remains in the CLOSED state.
+
+接続はCLOSED状態のままです。
+
+>2. If the connection is in any non-synchronized state (LISTEN, SYN-SENT, SYN-RECEIVED), and the incoming segment acknowledges something not yet sent (the segment carries an unacceptable ACK), or if an incoming segment has a security level or compartment which does not exactly match the level and compartment requested for the connection, a reset is sent.
+
+接続が非同期状態（LISTEN、SYN-SENT、SYN-RECEIVED）であり、着信セグメントがまだ送信されていないものを認識した場合（セグメントに許容できないACKが含まれている）、または着信セグメントにセキュリティレベルがある場合、 接続が要求されたレベルとコンパートメントに正確に一致しない場合、リセットが送信されます。
+
+
+
+
+
+
 
 
 
