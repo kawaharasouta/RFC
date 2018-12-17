@@ -880,7 +880,7 @@ TCP Bは、RSTを受信すると、LISTEN状態に戻る。
 
 >When the original SYN (pun intended) finally arrives at line 6, the synchronization proceeds normally.
 
-元のSYN（予定されているpun??）が最終的に6行目に到着すると、同期は正常に進みます。
+元のSYN（意図されているpun??）が最終的に6行目に到着すると、同期は正常に進みます。
 
 >If the SYN at line 6 had arrived before the RST, a more complex exchange might have occurred with RST's sent in both directions.
 
@@ -900,7 +900,7 @@ or
 
 >However, half-open connections are expected to be unusual, and the recovery procedure is mildly involved.
 
-しかし、半開きの接続は珍しいことが予想され、リカバリ手順は軽度に関与しています。
+しかし、half-openの接続は珍しいことが予想され、リカバリ手順は軽度に関与しています。
 
 >If at site A the connection no longer exists, then an attempt by the user at site B to send any data on it will result in the site B TCP receiving a reset control message.
 
@@ -910,16 +910,168 @@ or
 
 このようなメッセージは、サイトBのTCPに何かが間違っていることを示し、接続を中止することが期待されます。
 
+>Assume that two user processes A and B are communicating with one another when a crash occurs causing loss of memory to A's TCP.
+
+???
+
+
+>Depending on the operating system supporting A's TCP, it is likely that some error recovery mechanism exists.
+
+AのTCPをサポートしているオペレーティングシステムによっては、何らかのエラー回復メカニズムが存在する可能性があります。
+
+>When the TCP is up again, A is likely to start again from the beginning or from a recovery point.
+
+TCPが再びアップすると、Aははじめまたはリカバリポイントから再び開始される可能性があります。
+
+>As a result, A will probably try to OPEN the connection again or try to SEND on the connection it believes open.
+
+結果として、Aはおそらく接続を再度開くか、または開いていると思われる接続をSENDしようとします。
+
+>In the latter case, it receives the error message "connection not open" from the local (A's) TCP.
+
+後者の場合、ローカル（A）のTCPからエラーメッセージ "connection not open"を受信します。
+
+>In an attempt to establish the connection, A's TCP will send a segment containing SYN.
+
+接続を確立しようとすると、AのTCPはSYNを含むセグメントを送信します。
+
+>This scenario leads to the example shown in figure 10.
+
+このシナリオは、図10に示す例につながります。
+
+>After TCP A crashes, the user attempts to re-open the connection.
+
+TCP Aがクラッシュした後、ユーザーは接続を再開しようとします。
+
+>TCP B, in the meantime, thinks the connection is open.
+
+TCP Bはその間に, 接続が開いていると考えます。
+
+
+
+```
+		TCP A 																								TCP B
+
+  1.  (CRASH)                               (send 300,receive 100)
+
+  2.  CLOSED                                           ESTABLISHED
+
+  3.  SYN-SENT --> <SEQ=400><CTL=SYN>              --> (??)
+
+  4.  (!!)     <-- <SEQ=300><ACK=100><CTL=ACK>     <-- ESTABLISHED
+
+  5.  SYN-SENT --> <SEQ=100><CTL=RST>              --> (Abort!!)
+
+  6.  SYN-SENT                                         CLOSED
+
+  7.  SYN-SENT --> <SEQ=400><CTL=SYN>              -->
+
+```
+
+<div style="text-align: center;">
+ Half-Open Connection Discovery  Figure 10.
+</div>
+
+>When the SYN arrives at line 3, TCP B, being in a synchronized state, and the incoming segment outside the window, responds with an acknowledgment indicating what sequence it next expects to hear (ACK 100).
+
+SYNが同期状態にある3行目、TCP Bに到着し、ウィンドウ外の着信セグメントに到着すると、次にどのシーケンスが聞こえるかを示す肯定応答が返されます（ACK 100）。
+
+>TCP A sees that this segment does not acknowledge anything it sent and, being unsynchronized, sends a reset (RST) because it has detected a half-open connection.  TCP B aborts at line 5.
+
+TCP Aは、このセグメントが何も確認応答しないことを確認し、非同期で、ハーフオープン接続を検出したためリセット（RST）を送信します。
+
+>TCP A will continue to try to establish the connection; the problem is now reduced to the basic 3-way handshake of figure 7.
+
+TCP Aは引き続き接続の確立を試みます。 この問題は現在、図7の基本的な3ウェイハンドシェイクに縮小されています。
+
+>An interesting alternative case occurs when TCP A crashes and TCP B tries to send data on what it thinks is a synchronized connection.
+
+TCP Aがクラッシュし、TCP Bが同期接続と考えるデータを送信しようとすると、面白い代替ケースが発生します。
+
+>This is illustrated in figure 11.
+
+
+
+>In this case, the data arriving at TCP A from TCP B (line 2) is unacceptable because no such connection exists, so TCP A sends a RST.
+
+この場合、TCP B（2行目）からTCP Aに到着するデータは、そのような接続が存在しないため受け入れられないため、TCP AはRSTを送信します。
+
+>The RST is acceptable so TCP B processes it and aborts the connection.
+
+RSTは受け入れられ、TCP Bはそれを処理して接続を中止します。
+
+
+```
+
+ TCP A                                              TCP B
+
+  1.  (CRASH)                                   (send 300,receive 100)
+
+  2.  (??)    <-- <SEQ=300><ACK=100><DATA=10><CTL=ACK> <-- ESTABLISHED
+
+  3.          --> <SEQ=100><CTL=RST>                   --> (ABORT!!)
+
+```
+
+<div style="text-align: center;">
+Active Side Causes Half-Open Connection Discovery  Figure 11.
+</div>
+
+
+>In figure 12, we find the two TCPs A and B with passive connections waiting for SYN.
+
+図12では、SYNを待っているパッシブコネクションな2つのTCP AとBが見つかりました。
+
+>An old duplicate arriving at TCP B (line 2) stirs B into action.
+
+TCP B（2行目）に到着した古い複製はBを動作させます。
+
+>A SYN-ACK is returned (line 3) and causes TCP A to generate a RST (the ACK in line 3 is not acceptable).
+
+SYN-ACKが返され（3行目）、TCP AにRSTが生成されます（3行目のACKは受け入れられません）。
+
+>TCP B accepts the reset and returns to its passive LISTEN state.
+
+TCP Bはリセットを受け入れ、受動LISTEN状態に戻ります。
+
+```
+
+      TCP A                                         TCP B
+
+  1.  LISTEN                                        LISTEN
+
+  2.       ... <SEQ=Z><CTL=SYN>                -->  SYN-RECEIVED
+
+  3.  (??) <-- <SEQ=X><ACK=Z+1><CTL=SYN,ACK>   <--  SYN-RECEIVED
+
+  4.       --> <SEQ=Z+1><CTL=RST>              -->  (return to LISTEN!)
+
+  5.  LISTEN                                        LISTEN
+
+```
+
+<div style="text-align: center;">
+Old Duplicate SYN Initiates a Reset on two Passive Sockets  Figure 12.
+</div>
+
+
+>A variety of other cases are possible, all of which are accounted for by the following rules for RST generation and processing.
+
+他のさまざまなケースが可能であり、そのすべてがRSTの生成および処理のための以下のルールによって説明される。
+
+
+**Reset Generation**
+
+>As a general rule, reset (RST) must be sent whenever a segment arrives which apparently is not intended for the current connection.
+
+
+
+>A reset must not be sent if it is not clear that this is the case.
 
 
 
 
-
-
-
-
-
-
+>There are three groups of states:
 
 
 
