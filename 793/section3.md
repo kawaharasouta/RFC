@@ -1090,12 +1090,128 @@ Old Duplicate SYN Initiates a Reset on two Passive Sockets  Figure 12.
 
 接続が非同期状態（LISTEN、SYN-SENT、SYN-RECEIVED）であり、着信セグメントがまだ送信されていないものを認識した場合（セグメントに許容できないACKが含まれている）、または着信セグメントにセキュリティレベルがある場合、 接続が要求されたレベルとコンパートメントに正確に一致しない場合、リセットが送信されます。
 
+>If our SYN has not been acknowledged and the precedence level of the incoming segment is higher than the precedence level requested then either raise the local precedence level (if allowed by the user and the system) or send a reset; or if the precedence level of the incoming segment is lower than the precedence level requested then continue as if the precedence matched exactly (if the remote TCP cannot raise the precedence level to match ours this will be detected in the next segment it sends, and the connection will be terminated then).
+
+SYNが確認されておらず、着信セグメントの優先順位レベルが要求された優先順位レベルよりも高い場合は、ローカル優先順位レベルを上げる（ユーザーとシステムによって許可されている場合）か、リセットを送信します。 あるいは、入力セグメントの優先順位レベルが要求された優先順位レベルよりも低い場合は、優先順位が完全に一致するかのように継続します（リモートTCPが優先順位レベルを上げることができない場合、これは次のセグメントで検出されます）。 その後接続は終了します）。
+
+>If our SYN has been acknowledged (perhaps in this incoming segment) the precedence level of the incoming segment must match the local precedence level exactly, if it does not a reset must be sent.
+
+我々のSYNが（おそらくこの入力セグメントにおいて）確認されたならば、入力セグメントの優先順位レベルはローカル優先順位レベルと正確に一致しなければならず、それがリセットされなければ送信されなければならない。
+
+>If the incoming segment has an ACK field, the reset takes its sequence number from the ACK field of the segment, otherwise the reset has sequence number zero and the ACK field is set to the sum of the sequence number and segment length of the incoming segment.
+
+着信セグメントにACKフィールドがある場合、リセットはそのセグメントのACKフィールドからシーケンス番号を取得します。それ以外の場合、リセットのシーケンス番号は0になり、ACKフィールドは着信セグメントのシーケンス番号とセグメント長の合計に設定されます。 
+
+>The connection remains in the same state.
+
+接続は同じ状態のままです。
+
+>3.  If the connection is in a synchronized state (ESTABLISHED, FIN-WAIT-1, FIN-WAIT-2, CLOSE-WAIT, CLOSING, LAST-ACK, TIME-WAIT), any unacceptable segment (out of window sequence number or unacceptible acknowledgment number) must elicit only an empty acknowledgment segment containing the current send-sequence number and an acknowledgment indicating the next sequence number expected to be received, and the connection remains in the same state.
+
+接続が同期状態（ESTABLISHED、FIN-WAIT-1、FIN-WAIT-2、CLOSE-WAIT、CLOSING、LAST-ACK、TIME-WAIT）の場合、許容できないセグメント（ウィンドウシーケンス番号外または認識不能な確認応答） は、現在の送信シーケンス番号を含む空の確認応答セグメントと、受信されると予想される次のシーケンス番号を示す確認応答のみを引き出す必要があります。接続は同じ状態のままです。
+
+>If an incoming segment has a security level, or compartment, or precedence which does not exactly match the level, and compartment, and precedence requested for the connection,a reset is sent and connection goes to the CLOSED state.
+
+着信セグメントが、セキュリティー・レベル、コンパートメント、または接続に要求されたレベル、コンパートメント、および優先順位と完全には一致しない優先順位を持っている場合、リセットが送信され、接続はCLOSED状態になります。
+
+>The reset takes its sequence number from the ACK field of the incoming segment.
+
+>Reset Processing
+
+>In all states except SYN-SENT, all reset (RST) segments are validated by checking their SEQ-fields.
+
+SYN-SENTを除くすべての状態で、すべてのリセット（RST）セグメントはそれらのSEQフィールドをチェックすることによって検証されます。
+
+>A reset is valid if its sequence number is in the window.
+
+シーケンス番号がウィンドウ内にある場合、リセットは有効です。
+
+>In the SYN-SENT state (a RST received in response to an initial SYN), the RST is acceptable if the ACK field acknowledges the SYN.
+
+SYN-SENT状態（初期SYNに応答して受信されたRST）では、ACKフィールドがSYNを確認応答すれば、RSTは許容可能である。
+
+>The receiver of a RST first validates it, then changes state.
+
+RSTの受信側はまずそれを検証し、次に状態を変更します。
+
+>If the receiver was in the LISTEN state, it ignores it.
+
+受信機がLISTEN状態にあったなら、それはそれを無視します。
+
+>If the receiver was in SYN-RECEIVED state and had previously been in the LISTEN state, then the receiver returns to the LISTEN state, otherwise the receiver aborts the connection and goes to the CLOSED state.
+
+受信機がSYN−RECEIVED状態にあり、以前にLISTEN状態にあったならば、受信機はLISTEN状態に戻り、そうでなければ受信機は接続を中止してCLOSED状態に進む。
+
+>If the receiver was in any other state, it aborts the connection and advises the user and goes to the CLOSED state.
+
+受信機が他の状態にあったならば、それは接続を中止して、ユーザに助言してCLOSED状態に行きます。
 
 
+### 3.5.Closing a Connection
 
+>CLOSE is an operation meaning "I have no more data to send."  The notion of closing a full-duplex connection is subject to ambiguous interpretation, of course, since it may not be obvious how to treat the receiving side of the connection.  We have chosen to treat CLOSE in a simplex fashion.
 
+CLOSEは「送信するデータがもうない」という意味の操作です。 全二重接続を閉じるという概念は、接続の受信側をどのように処理するかが明確でない場合があるため、もちろんあいまいな解釈に従います。 私たちはCLOSEをシンプレックス様式で扱うことを選んだ。
 
+>We have chosen to treat CLOSE in a simplex fashion.
 
+私たちはCLOSEをシンプレックス様式で扱うことを選んだ。
+
+>The user who CLOSEs may continue to RECEIVE until he is told that the other side has CLOSED also.
+
+CLOSEしたユーザは、相手側もCLOSEDになったと言われるまでRECEIVEを続けます。
+
+>Thus, a program could initiate several SENDs followed by a CLOSE, and then continue to RECEIVE until signaled that a RECEIVE failed because the other side has CLOSED.
+
+したがって、プログラムはいくつかのSENDとそれに続くCLOSEを開始し、反対側がCLOSEDであるためにRECEIVEが失敗したことを知らせるまでRECEIVEを続けることができます。
+
+>We assume that the TCP will signal a user, even if no RECEIVEs are outstanding, that the other side has closed, so the user can terminate his side gracefully.
+
+たとえRECEIVEが未解決でなくても、相手側が閉じていることをTCPがユーザに知らせるので、ユーザは自分の側を適切に終了できると仮定します。
+
+>A TCP will reliably deliver all buffers SENT before the connection was CLOSED so a user who expects no data in return need only wait to hear the connection was CLOSED successfully to know that all his data was received at the destination TCP.
+
+TCPは、接続がクローズされる前にすべてのバッファSENTを確実に配信するので、データが返ってこないと予想されるユーザは、接続が正常にクローズされたことを確認するために待つ必要があります。
+
+>Users must keep reading connections they close for sending until the TCP says no more data.
+
+TCPがそれ以上データを示さなくなるまで、ユーザは送信のために閉じる接続を読み続けなければなりません。
+
+>There are essentially three cases:
+
+>1) The user initiates by telling the TCP to CLOSE the connection
+
+1) ユーザはTCPに接続を閉じるように指示することによって開始します 
+
+>2) The remote TCP initiates by sending a FIN control signal
+
+リモートTCPはFIN制御信号を送信することによって開始します
+
+>3) Both users CLOSE simultaneously
+
+両方のユーザーが同時に閉じる
+
+>Case 1:  Local user initiates the close
+
+>In this case, a FIN segment can be constructed and placed on the outgoing segment queue.
+
+この場合、FINセグメントを作成して発信セグメントキューに入れることができます。
+
+>No further SENDs from the user will be accepted by the TCP, and it enters the FIN-WAIT-1 state.
+
+ユーザからのそれ以上のSENDはTCPによって受け入れられず、FIN-WAIT-1状態に入ります。
+
+>RECEIVEs are allowed in this state.
+
+この状態ではRECEIVEが許可されます。
+
+>All segments preceding and including FIN will be retransmitted until acknowledged.
+
+FINの前後のすべてのセグメントは、確認されるまで再送信されます。
+
+>When the other TCP has both acknowledged the FIN and sent a FIN of its own, the first TCP can ACK this FIN.
+
+他のTCPがFINを承認し、それ自身のFINを送信したとき、最初のTCPはこのFINをACKすることができます。
 
 
 
