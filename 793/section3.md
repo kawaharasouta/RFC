@@ -1213,9 +1213,1931 @@ FINの前後のすべてのセグメントは、確認されるまで再送信�
 
 他のTCPがFINを承認し、それ自身のFINを送信したとき、最初のTCPはこのFINをACKすることができます。
 
+>Note that a TCP receiving a FIN will ACK but not send its own FIN until its user has CLOSED the connection also.
+
+FINを受信したTCPはACKを送信しますが、そのユーザーが接続を閉じるまで自身はFINを送信しないことに注意.
+
+>Case 2:  TCP receives a FIN from the network
+
+>If an unsolicited FIN arrives from the network, the receiving TCP can ACK it and tell the user that the connection is closing.
+
+未承諾のFINがネットワークから到着した場合、受信側TCPはそれをACKし、接続が閉じていることをユーザーに知らせることができます。
+
+>The user will respond with a CLOSE, upon which the TCP can send a FIN to the other TCP after sending any remaining data.
+
+全ての残っているデータも送った後に他のTCPにFINを送ることでCLOSEに応答する.
+
+>The TCP then waits until its own FIN is acknowledged whereupon it deletes the connection.
+
+TCPはそれからそれ自身のFINが確認されるまで待機し、そこで接続を削除します。
+
+>If an ACK is not forthcoming, after the user timeout the connection is aborted and the user is told.
+
+ACKが送信されない場合は、ユーザーのタイムアウト後に接続が中断され、ユーザーに通知されます。
+
+>Case 3:  both users close simultaneously (同時CLOSE)
+
+>A simultaneous CLOSE by users at both ends of a connection causes FIN segments to be exchanged.
+
+接続の両端でユーザが同時に閉じると、FINセグメントが交換されます。
+
+>When all segments preceding the FINs have been processed and acknowledged, each TCP can ACK the FIN it has received.
+
+FINに先行するすべてのセグメントが処理され確認されると、各TCPは受信したFINにACKを送信できます。
+
+>Both will, upon receiving these ACKs, delete the connection.
+
+両方とも、これらのACKを受信すると、接続を削除します。
+
+```
+     TCP A                                                TCP B
+
+  1.  ESTABLISHED                                          ESTABLISHED
+
+  2.  (Close)
+      FIN-WAIT-1  --> <SEQ=100><ACK=300><CTL=FIN,ACK>  --> CLOSE-WAIT
+
+  3.  FIN-WAIT-2  <-- <SEQ=300><ACK=101><CTL=ACK>      <-- CLOSE-WAIT
+
+  4.                                                       (Close)
+      TIME-WAIT   <-- <SEQ=300><ACK=101><CTL=FIN,ACK>  <-- LAST-ACK
+
+  5.  TIME-WAIT   --> <SEQ=101><ACK=301><CTL=ACK>      --> CLOSED
+
+  6.  (2 MSL)
+      CLOSED
+```
+
+<div style="text-align: center;">
+Figure 13.  Normal Close Sequence 
+</div>
 
 
+```
+      TCP A                                                TCP B
 
+  1.  ESTABLISHED                                          ESTABLISHED
+
+  2.  (Close)                                              (Close)
+      FIN-WAIT-1  --> <SEQ=100><ACK=300><CTL=FIN,ACK>  ... FIN-WAIT-1
+                  <-- <SEQ=300><ACK=100><CTL=FIN,ACK>  <--
+                  ... <SEQ=100><ACK=300><CTL=FIN,ACK>  -->
+
+  3.  CLOSING     --> <SEQ=101><ACK=301><CTL=ACK>      ... CLOSING
+                  <-- <SEQ=301><ACK=101><CTL=ACK>      <--
+                  ... <SEQ=101><ACK=301><CTL=ACK>      -->
+
+  4.  TIME-WAIT                                            TIME-WAIT
+      (2 MSL)                                              (2 MSL)
+      CLOSED                                               CLOSED
+```
+
+<div style="text-align: center;">
+Figure 14.  Simultaneous Close Sequence
+</div>
+
+
+### 3.6.  Precedence and Security
+
+>The intent is that connection be allowed only between ports operating with exactly the same security and compartment values and at the higher of the precedence level requested by the two ports.
+
+その目的は、まったく同じセキュリティ値とコンパートメント値で動作しているポート間、および2つのポートによって要求されている優先順位レベルの高いポート間でのみ接続が許可されることです。
+
+>The precedence and security parameters used in TCP are exactly those defined in the Internet Protocol (IP) [2].
+
+TCPで使用される優先順位とセキュリティのパラメータは、まさにインターネットプロトコル（IP）[2]で定義されているものです。
+
+>Throughout this TCP specification the term "security/compartment" is intended to indicate the security parameters used in IP including security, compartment, user group, and handling restriction.
+
+このTCP仕様を通して、「セキュリティ/コンパートメント」という用語は、セキュリティ、コンパートメント、ユーザグループ、および取り扱い制限を含む、IPで使用されるセキュリティパラメータを示すことを目的としています。
+
+>A connection attempt with mismatched security/compartment values or a lower precedence value must be rejected by sending a reset.
+
+セキュリティ/コンパートメントの値が一致しない、または優先順位の値が低い接続の試行は、リセットを送信して拒否する必要があります。
+
+>Rejecting a connection due to too low a precedence only occurs after an acknowledgment of the SYN has been received.
+
+優先順位が低すぎるために接続を拒否するのは、SYNの確認応答を受信した後に限ります。
+
+>Note that TCP modules which operate only at the default value of precedence will still have to check the precedence of incoming segments and possibly raise the precedence level they use on the connection.
+
+優先順位のデフォルト値でのみ動作するTCPモジュールは、着信セグメントの優先順位を確認し、接続で使用する優先順位レベルを上げる必要があることに注意してください。
+
+>The security paramaters may be used even in a non-secure environment (the values would indicate unclassified data), thus hosts in non-secure environments must be prepared to receive the security parameters, though they need not send them.
+
+セキュリティパラメータは、安全でない環境でも使用される可能性があるため（値は未分類のデータを示します）、安全でない環境のホストはセキュリティパラメータを受信しないように準備する必要があります。
+
+### 3.7.  Data Communication
+
+>Once the connection is established data is communicated by the exchange of segments.
+
+接続が確立されると、データはセグメントの交換によって通信されます。
+
+>Because segments may be lost due to errors (checksum test failure), or network congestion, TCP uses retransmission (after a timeout) to ensure delivery of every segment.
+
+セグメントはエラー（チェックサムテストの失敗）またはネットワークの輻輳のために失われる可能性があるため、TCPはすべてのセグメントの配信を保証するために（タイムアウト後の）再送信を使用します。
+
+>Duplicate segments may arrive due to network or TCP retransmission.
+
+ネットワークまたはTCPの再送信により、重複するセグメントが到着する可能性があります。
+
+>As discussed in the section on sequence numbers the TCP performs certain tests on the sequence and acknowledgment numbers in the segments to verify their acceptability.
+
+シーケンス番号のセクションで説明したように、TCPはセグメント内のシーケンス番号と確認応答番号について特定のテストを実行して、それらの受け入れ可能性を検証します。
+
+>The sender of data keeps track of the next sequence number to use in the variable SND.NXT.
+
+データの送信者は、変数SND.NXTで使用する次のシーケンス番号を追跡します。
+
+>The receiver of data keeps track of the next sequence number to expect in the variable RCV.NXT.
+
+データの受信側は、変数RCV.NXTに期待される次のシーケンス番号を追跡します。
+
+>The sender of data keeps track of the oldest unacknowledged sequence number in the variable SND.UNA.
+
+データの送信者は、変数SND.UNA内の最も古い未確認シーケンス番号を追跡します。
+
+>If the data flow is momentarily idle and all data sent has been acknowledged then the three variables will be equal.
+
+データフローが一時的にアイドルで、送信されたすべてのデータが確認応答されている場合、3つの変数は等しくなります。
+
+>When the sender creates a segment and transmits it the sender advances SND.NXT.
+
+送信者がセグメントを作成して送信すると、送信者はSND.NXTを進めます。
+
+>When the receiver accepts a segment it advances RCV.NXT and sends an acknowledgment.
+
+受信側がセグメントを受け入れると、RCV.NXTを進めて確認応答を送信します。
+
+>When the data sender receives an acknowledgment it advances SND.UNA.
+
+データ送信者が確認応答を受信すると、SND.UNAに進みます。
+
+>The extent to which the values of these variables differ is a measure of the delay in the communication.
+
+これらの変数の値がどの程度異なるかは、通信における遅延の尺度です。
+
+>The amount by which the variables are advanced is the length of the data in the segment.
+
+変数を進める量は、セグメント内のデータの長さです。
+
+>Note that once in the ESTABLISHED state all segments must carry current acknowledgment information.
+
+ESTABLISHED状態になると、すべてのセグメントが現在の確認応答情報を伝えなければならないことに注意してください。
+
+>The CLOSE user call implies a push function, as does the FIN control flag in an incoming segment.
+
+CLOSEユーザー呼び出しは、着信セグメントのFIN制御フラグと同様に、プッシュ機能を暗黙指定します。
+
+#### Retransmission Timeout
+
+>Because of the variability of the networks that compose an internetwork system and the wide range of uses of TCP connections the retransmission timeout must be dynamically determined.
+
+インターネットワークシステムを構成するネットワークの多様性とTCP接続の広範囲の使用法のために、再送タイムアウトは動的に決定されなければなりません。
+
+>One procedure for determining a retransmission time out is given here as an illustration.
+
+再送信タイムアウトを決定するための１つの手順が例示としてここに与えられる。
+
+#### An Example Retransmission Timeout Procedure
+
+>Measure the elapsed time between sending a data octet with a particular sequence number and receiving an acknowledgment that covers that sequence number (segments sent do not have to match segments received).
+
+特定のシーケンス番号でデータオクテットを送信してから、そのシーケンス番号をカバーする確認応答を受信するまでの経過時間を測定します（送信されたセグメントは受信したセグメントと一致する必要はありません）。
+
+>This measured elapsed time is the Round Trip Time (RTT).
+
+この測定された経過時間は往復時間（RTT）です。
+
+>Next compute a Smoothed Round Trip Time (SRTT)
+
+次に平滑化往復時間（SRTT）を計算します。
+
+```
+as:
+        SRTT = ( ALPHA * SRTT ) + ((1-ALPHA) * RTT)
+      and based on this, compute the retransmission timeout (RTO)
+as:
+        RTO = min[UBOUND,max[LBOUND,(BETA*SRTT)]]
+```
+
+>where UBOUND is an upper bound on the timeout (e.g., 1 minute), LBOUND is a lower bound on the timeout (e.g., 1 second), ALPHA is a smoothing factor (e.g., .8 to .9), and BETA is a delay variance factor (e.g., 1.3 to 2.0).
+
+ここで、UBOUNDはタイムアウトの上限（たとえば1分）、LBOUNDはタイムアウトの下限（たとえば1秒）、ALPHAは平滑化係数（たとえば.8から.9）、そしてBETAは 遅延分散係数（例：1.3〜2.0）
+
+#### The Communication of Urgent Information
+
+>The objective of the TCP urgent mechanism is to allow the sending user to stimulate the receiving user to accept some urgent data and to permit the receiving TCP to indicate to the receiving user when all the currently known urgent data has been received by the user.
+
+ＴＣＰ緊急メカニズムの目的は、送信側ユーザが受信側ユーザに何らかの緊急データの受け入れを促し、現在知られているすべての緊急データがユーザによって受信されたときに受信側ＴＣＰが受信側ユーザに知らせることを可能にすることである。
+
+>This mechanism permits a point in the data stream to be designated as the end of urgent information.
+
+このメカニズムにより、データストリーム内のポイントを緊急情報の終わりとして指定することができます。
+
+>Whenever this point is in advance of the receive sequence number (RCV.NXT) at the receiving TCP, that TCP must tell the user to go into "urgent mode"; when the receive sequence number catches up to the urgent pointer, the TCP must tell user to go into "normal mode".  If the urgent pointer is updated while the user is in "urgent mode", the update will be invisible to the user.
+
+この時点が受信側TCPの受信シーケンス番号（RCV.NXT）より前である場合は常に、そのTCPはユーザーに「緊急モード」に入るように指示する必要があります。 受信シーケンス番号が緊急ポインタに追いつくと、TCPはユーザに「通常モード」に入るように伝えなければなりません。 ユーザが「緊急モード」にある間に緊急ポインタが更新されると、その更新はユーザには見えなくなる。
+
+>The method employs a urgent field which is carried in all segments transmitted.
+
+この方法は、送信されたすべてのセグメントで運ばれるurgent fieldを使用する。
+
+>The URG control flag indicates that the urgent field is meaningful and must be added to the segment sequence number to yield the urgent pointer.
+
+URG制御フラグは、緊急フィールドが意味を持ち、緊急ポインタを生成するためにセグメントシーケンス番号に追加されなければならないことを示します。
+
+>The absence of this flag indicates that there is no urgent data outstanding.
+
+このフラグがないことは、未処理の緊急データがないことを示します。
+
+>To send an urgent indication the user must also send at least one data octet.
+
+緊急表示を送信するには、ユーザーは少なくとも1つのデータオクテットも送信する必要があります。
+
+>If the sending user also indicates a push, timely delivery of the urgent information to the destination process is enhanced.
+
+送信側ユーザもプッシュを指示した場合、宛先プロセスへの緊急情報のタイムリーな配信が向上します。
+
+#### Managing the Window
+
+>The window sent in each segment indicates the range of sequence numbers the sender of the window (the data receiver) is currently prepared to accept.
+
+各セグメントで送信されるウィンドウは、ウィンドウの送信者（データ受信者）が現在受け入れる準備ができているシーケンス番号の範囲を示します。
+
+>There is an assumption that this is related to the currently available data buffer space available for this connection.
+
+これはこの接続に利用可能な現在利用可能なデータバッファスペースに関連しているという仮定があります。
+
+>Indicating a large window encourages transmissions.
+
+大きなウィンドウを表示すると、送信が促進されます。
+
+>If more data arrives than can be accepted, it will be discarded.
+
+受け入れられるよりも多くのデータが到着すると、それは破棄されます。
+
+>This will result in excessive retransmissions, adding unnecessarily to the load on the network and the TCPs.
+
+これは過度の再送信をもたらし、ネットワークとTCPの負荷を不必要に増やします。
+
+>Indicating a small window may restrict the transmission of data to the point of introducing a round trip delay between each new segment transmitted.
+
+小さいウィンドウを指示することは、送信される各新しいセグメント間に往復遅延を導入する点までデータの送信を制限することがある。
+
+>The mechanisms provided allow a TCP to advertise a large window and to subsequently advertise a much smaller window without having accepted that much data.
+
+提供されているメカニズムは、TCPが大きなウィンドウをアドバタイズし、その後、それほど多くのデータを受け入れずに、はるかに小さなウィンドウをアドバタイズすることを可能にします。
+
+>This, so called "shrinking the window," is strongly discouraged.
+
+これはいわゆる縮小ウィンドと言われています.
+
+>The robustness principle dictates that TCPs will not shrink the window themselves, but will be prepared for such behavior on the part of other TCPs.
+
+ロバスト性の原則は、TCPはウィンドウ自体を縮小するのではなく、他のTCP側のそのような振る舞いに備えて準備することを指示します。
+
+>The sending TCP must be prepared to accept from the user and send at least one octet of new data even if the send window is zero.
+
+送信ウィンドウがゼロであっても、送信側TCPはユーザーから受け入れて新しいデータを少なくとも1オクテット送信する準備をしておく必要があります。
+
+>The sending TCP must regularly retransmit to the receiving TCP even when the window is zero.
+
+ウィンドウがゼロの場合でも、送信側TCPは受信側TCPに定期的に再送信する必要があります。
+
+>Two minutes is recommended for the retransmission interval when the window is zero.
+
+ウィンドウがゼロのときの再送信間隔は2分が推奨されます。
+
+>This retransmission is essential to guarantee that when either TCP has a zero window the re-opening of the window will be reliably reported to the other.
+
+この再送信は、どちらかのTCPがゼロウィンドウを持っているときにウィンドウの再オープンがもう一方に確実に報告されることを保証するために不可欠です。
+
+>When the receiving TCP has a zero window and a segment arrives it must still send an acknowledgment showing its next expected sequence number and current window (zero).
+
+受信側TCPにゼロウィンドウがあり、セグメントが到着したとき、それはまだその次の期待されるシーケンス番号と現在のウィンドウ（ゼロ）を示す確認応答を送信しなければなりません。
+
+>The sending TCP packages the data to be transmitted into segments which fit the current window, and may repackage segments on the retransmission queue.
+
+送信側TCPは、送信するデータを現在のウィンドウに合うセグメントにパッケージ化し、再送信キューにセグメントを再パッケージ化することがあります。
+
+>Such repackaging is not required, but may be helpful.
+
+そのような再パッケージ化は必須ではありませんが、役に立つかもしれません。
+
+>In a connection with a one-way data flow, the window information will be carried in acknowledgment segments that all have the same sequence number so there will be no way to reorder them if they arrive out of order.
+
+一方向のデータフローに関連して、ウィンドウ情報は、すべて同じシーケンス番号を持つ確認応答セグメントで伝達されるため、順序がずれて到着した場合に並べ替えることはできません。
+
+>This is not a serious problem, but it will allow the window information to be on occasion temporarily based on old reports from the data receiver.
+
+これは深刻な問題ではありませんが、データ受信者からの古いレポートに基づいてウィンドウ情報が一時的に表示されることを可能にします。
+
+>A refinement to avoid this problem is to act on the window information from segments that carry the highest acknowledgment number (that is segments with acknowledgment number equal or greater than the highest previously received).
+
+この問題を回避するための改良点は、最大の確認応答番号を搬送するセグメント（すなわち、以前に受信した最大のものと等しいかそれより大きい確認応答番号を有するセグメント）からのウィンドウ情報に作用することである。
+
+>The window management procedure has significant influence on the communication performance.  The following comments are suggestions to implementers.
+
+ウィンドウ管理手順は通信性能に大きな影響を与えます。 以下のコメントは実装者への提案です。
+
+#### Window Management Suggestions
+
+>Allocating a very small window causes data to be transmitted in many small segments when better performance is achieved using fewer large segments.
+
+非常に小さいウィンドウを割り振ると、少数の大きいセグメントを使用してよりよいパフォーマンスが達成されるときに、データが多数の小さいセグメントで送信されることになります。
+
+>One suggestion for avoiding small windows is for the receiver to defer updating a window until the additional allocation is at least X percent of the maximum allocation possible for the connection (where X might be 20 to 40).
+
+小さなウィンドウを回避するための１つの提案は、追加割り当てが接続に可能な最大割り当ての少なくともＸパーセントになるまで受信機がウィンドウの更新を延期することである（Ｘは２０から４０であり得る）。
+
+>Another suggestion is for the sender to avoid sending small segments by waiting until the window is large enough before sending data.  If the the user signals a push function then the data must be sent even if it is a small segment.
+
+別の提案は、データが送信される前にウィンドウが十分に大きくなるまで待つことによって送信者が小さなセグメントを送信することを回避することです。 ユーザがプッシュ機能を信号で伝えると、たとえそれが小さなセグメントであってもデータは送られなければならない。
+
+>Note that the acknowledgments should not be delayed or unnecessary retransmissions will result.
+
+確認応答が遅れるべきではないか、または不必要な再送信が結果として生じることに注意してください。
+
+>One strategy would be to send an acknowledgment when a small segment arrives (with out updating the window information), and then to send another acknowledgment with new window information when the window is larger.
+
+1つの戦略は、（ウィンドウ情報を更新せずに）小さなセグメントが到着したときに確認応答を送信し、次にウィンドウが大きいときに新しいウィンドウ情報を使用して別の確認応答を送信することです。
+
+>The segment sent to probe a zero window may also begin a break up of transmitted data into smaller and smaller segments.
+
+ゼロウィンドウを探索するために送信されたセグメントはまた、送信されたデータをますます小さなセグメントに分割することを開始し得る。
+
+>If a segment containing a single data octet sent to probe a zero window is accepted, it consumes one octet of the window now available.
+
+ゼロウィンドウをプローブするために送信された単一のデータオクテットを含むセグメントが受け入れられると、それは現在利用可能なウィンドウの1オクテットを消費します。
+
+>If the sending TCP simply sends as much as it can whenever the window is non zero, the transmitted data will be broken into alternating big and small segments.
+
+送信側TCPが、ウィンドウがゼロ以外のときにできる限り送信するだけでは、送信データは大小のセグメントに交互に分割されます。
+
+>As time goes on, occasional pauses in the receiver making window allocation available will result in breaking the big segments into a small and not quite so big pair. And after a while the data transmission will be in mostly small segments.  
+
+時間が経つにつれて、ウィンドウ割り当てを利用可能にする受信機の時折の休止は、大きなセグメントをそれほど大きくないペアに分割することになります。 そしてしばらくすると、データ転送はほとんど小さなセグメントになります。
+
+>The suggestion here is that the TCP implementations need to actively attempt to combine small window allocations into larger windows, since the mechanisms for managing the window tend to lead to many small windows in the simplest minded implementations.
+
+ここでの提案は、ウィンドウを管理するためのメカニズムが最も単純な志向の実装では多くの小さなウィンドウにつながる傾向があるので、TCP実装は小さなウィンドウ割り当てをより大きなウィンドウに積極的に組み合わせることを試みる必要があるということです。
+
+### 3.8.  Interfaces
+
+>There are of course two interfaces of concern:  the user/TCP interface and the TCP/lower-level interface.
+
+当然のことながら、ユーザー/ TCPインターフェースとTCP /下位インターフェースの2つのインターフェースがあります。
+
+>We have a fairly elaborate model of the user/TCP interface, but the interface to the lower level protocol module is left unspecified here, since it will be specified in detail by the specification of the lowel level protocol.
+
+私たちはユーザ/ TCPインタフェースのかなり複雑なモデルを持っています、しかし、それが低レベルプロトコルの仕様によって詳細に指定されるので、低レベルプロトコルモジュールへのインタフェースはここで指定されないままにされます。
+
+>For the case that the lower level is IP we note some of the parameter values that TCPs might use.
+
+より低いレベルがIPである場合に関しては私達はTCPが使用するかもしれないパラメータ値のいくつかに注意します。
+
+#### User/TCP Interface
+
+>The following functional description of user commands to the TCP is, at best, fictional, since every operating system will have different facilities.
+
+TCPに対するユーザコマンドの以下の機能的な説明は、せいぜい架空のものです。すべてのオペレーティングシステムが異なる機能を持つためです。
+
+>Consequently, we must warn readers that different TCP implementations may have different user interfaces.
+
+その結果、私たちは読者に異なるTCP実装が異なるユーザーインターフェースを持つかもしれないことを警告しなければなりません。
+
+>However, all TCPs must provide a certain minimum set of services to guarantee that all TCP implementations can support the same protocol hierarchy.
+
+ただし、すべてのTCP実装が同じプロトコル階層をサポートできることを保証するために、すべてのTCPは特定の最小限のサービスセットを提供する必要があります。
+
+>This section specifies the functional interfaces required of all TCP implementations.
+
+このセクションはすべてのTCP実装に必要な機能的なインタフェースを指定します。
+
+#### TCP User Commands
+
+>The following sections functionally characterize a USER/TCP interface.
+
+以下の節では、USER / TCPインタフェースを機能的に特徴付けます。
+
+>The notation used is similar to most procedure or function calls in high level languages, but this usage is not meant to rule out trap type service calls (e.g., SVCs, UUOs, EMTs).
+
+使用される表記法は、高水準言語におけるほとんどの手続きまたは関数呼び出しに似ていますが、この使用法はトラップ型サービス呼び出し（例えば、SVC、UUO、EMT）を除外することを意図していません。
+
+>The user commands described below specify the basic functions the TCP must perform to support interprocess communication.
+
+下記のユーザコマンドは、TCPがプロセス間通信をサポートするために実行しなければならない基本機能を指定します。
+
+>Individual implementations must define their own exact format, and may provide combinations or subsets of the basic functions in single calls.
+
+個々のインプリメンテーションはそれら自身の正確なフォーマットを定義しなければならず、そして単一の呼び出しで基本機能の組み合わせまたはサブセットを提供するかもしれません。
+
+>In particular, some implementations may wish to automatically OPEN a connection on the first SEND or RECEIVE issued by the user for a given connection.
+
+特に、いくつかの実装は、与えられた接続に対してユーザによって発行された最初のSENDまたはRECEIVEで自動的に接続を開くことを望むかもしれません。
+
+>In providing interprocess communication facilities, the TCP must not only accept commands, but must also return information to the processes it serves.
+
+プロセス間通信機能を提供する際、TCPはコマンドを受け付けるだけでなく、サービスを提供しているプロセスに情報を返さなければなりません。
+
+>The latter consists of:
+
+>(a) general information about a connection (e.g., interrupts, remote close, binding of unspecified foreign socket).
+
+接続に関する一般的な情報（例：割り込み、リモートクローズ、未指定の外部ソケットのバインド）。
+
+> (b) replies to specific user commands indicating success or various types of failure.
+
+成功またはさまざまな種類の失敗を示す特定のユーザーコマンドに応答します。
+
+```
+      Open
+
+        Format:  OPEN (local port, foreign socket, active/passive
+        [, timeout] [, precedence] [, security/compartment] [, options])
+        -> local connection name
+```
+
+>We assume that the local TCP is aware of the identity of the processes it serves and will check the authority of the process to use the connection specified.
+
+私たちは、地方のTCPがそれが役立つプロセスのアイデンティティを知っていると仮定して、指定された接続を使用するためにプロセスの権威をチェックするでしょう。
+
+>Depending upon the implementation of the TCP, the local network and TCP identifiers the the be for the source address will either be supplied by the TCP or lower level protocol (e.g., IP).
+
+ＴＣＰの実装に応じて、ローカルネットワークおよび送信元アドレスのためのＴＣＰ識別子は、ＴＣＰまたはより低いレベルのプロトコル（例えばＩＰ）によって供給されることになる。
+
+>These considerations are the result of concern about security, to the extent that no TCP be able to masquerade as another one, and so on.
+
+これらの考慮事項は、TCPが他のTCPになりすますことができないなど、セキュリティに関する懸念の結果です。
+
+>Similarly, no process can masquerade as another without the collusion of the TCP.
+
+同様に、TCPの共謀なしには、他のプロセスを装うことはできません。
+
+>If the active/passive flag is set to passive, then this is a call to LISTEN for an incoming connection.
+
+アクティブ/パッシブフラグがパッシブに設定されている場合、これは着信接続に対するLISTENへの呼び出しです。
+
+>A passive open may have either a fully specified foreign socket to wait for a wait particular connection or an unspecified foreign socket to for any call.
+
+パッシブオープンには、特定の接続を待つために完全に指定された外部ソケット、または任意の呼び出しを待機するための未指定の外部ソケットがあります。
+
+>A fully specified passive call can be made active by the subsequent execution of a SEND.
+
+その後のSENDの実行によって、完全指定の受動呼び出しをアクティブにすることができます。
+
+>A transmission control block (TCB) is created and partially filled in with data from the OPEN command parameters.
+
+伝送制御ブロック（TCB）が作成され、OPENコマンド・パラメーターからのデータで部分的に埋められます。
+
+>On an active OPEN command, the TCP will begin the procedure to synchronize (i.e., establish) the connection at once.
+
+アクティブなＯＰＥＮコマンドでは、ＴＣＰは一度に接続を同期させる（すなわち確立する）手順を開始する。
+
+>The timeout, if present, permits the caller to set up a timeout for all data submitted to TCP.
+
+タイムアウトが存在する場合、呼び出し側はTCPに送信されたすべてのデータに対してタイムアウトを設定できます。
+
+>If data is not successfully delivered to the destination within the timeout period, the TCP will abort the connection.
+
+タイムアウト期間内にデータが宛先に正常に配信されなかった場合、TCPは接続を中止します。
+
+>The present global default is five minutes.
+
+現在のグローバルデフォルトは5分です。
+
+>The TCP or some component of the operating system will verify the users authority to open a connection with the specified precedence or security/compartment.
+
+TCPまたはオペレーティングシステムの一部のコンポーネントは、指定された優先順位またはセキュリティ/コンパートメントで接続を開くためのユーザー権限を確認します。
+
+>The absence of precedence or security/compartment specification in the OPEN call indicates the default values must be used.
+
+OPEN呼び出しに優先順位またはセキュリティー/コンパートメントの指定がないことは、デフォルト値を使用する必要があることを示しています。
+
+>TCP will accept incoming requests as matching only if the security/compartment information is exactly the same and only if the precedence is equal to or higher than the precedence requested in the OPEN call.
+
+セキュリティ/コンパートメント情報がまったく同じであり、優先順位がOPEN呼び出しで要求された優先順位以上である場合に限り、TCPは着信要求を一致として受け入れます。
+
+>The precedence for the connection is the higher of the values requested in the OPEN call and received from the incoming request, and fixed at that value for the life of the connection.
+
+接続の優先順位は、OPEN呼び出しで要求され、着信要求から受信された値のうち高い方の値であり、接続の存続期間中その値に固定されています。
+
+>Implementers may want to give the user control of this precedence negotiation.
+
+実装者は、この優先順位の交渉をユーザーに制御させることができます。
+
+>For example, the user might be allowed to specify that the precedence must be exactly matched, or that any attempt to raise the precedence be confirmed by the user.
+
+たとえば、優先順位を完全に一致させる必要があること、または優先順位を上げるための試行をユーザーが確認することをユーザーに指定させることができます。
+
+>A local connection name will be returned to the user by the TCP.
+
+ローカル接続名はTCPによってユーザーに返されます。
+
+>The local connection name can then be used as a short hand term for the connection defined by the <local socket, foreign socket> pair.
+
+ローカル接続名は、<local socket、foreign socket>のペアで定義された接続の簡単な用語として使用できます。
+
+```
+      Send
+
+        Format:  SEND (local connection name, buffer address, byte
+        count, PUSH flag, URGENT flag [,timeout])
+```
+
+>This call causes the data contained in the indicated user buffer to be sent on the indicated connection.
+
+この呼び出しは、指示されたユーザー・バッファーに含まれているデータを指示された接続で送信させます。
+
+>If the connection has not been opened, the SEND is considered an error.
+
+接続が開かれていない場合、SENDはエラーと見なされます。
+
+>Some implementations may allow users to SEND first; in which case, an automatic OPEN would be done.
+
+いくつかの実装はユーザが最初に送ることを可能にするかもしれません。 その場合、自動オープンが行われます。
+
+>If the calling process is not authorized to use this connection, an error is returned.
+
+呼び出しプロセスがこの接続を使用することを許可されていない場合は、エラーが返されます。
+
+>If the PUSH flag is set, the data must be transmitted promptly to the receiver, and the PUSH bit will be set in the last TCP segment created from the buffer.
+
+PUSHフラグが設定されている場合、データは受信側に速やかに送信されなければならず、PUSHビットはバッファから作成された最後のTCPセグメントに設定されます。
+
+>If the PUSH flag is not set, the data may be combined with data from subsequent SENDs for transmission efficiency.
+
+プッシュフラグが設定されていない場合、データは伝送効率のために後続のＳＥＮＤからのデータと組み合わされてもよい。
+
+>If the URGENT flag is set, segments sent to the destination TCP will have the urgent pointer set.
+
+URGENTフラグが設定されている場合、宛先TCPに送信されたセグメントには緊急ポインタが設定されます。
+
+>The receiving TCP will signal the urgent condition to the receiving process if the urgent pointer indicates that data preceding the urgent pointer has not been consumed by the receiving process.
+
+緊急ポインタが、緊急ポインタの前のデータが受信プロセスによって消費されていないことを示している場合、受信TCPは受信プロセスに緊急状態を通知します。
+
+>The purpose of urgent is to stimulate the receiver to process the urgent data and to indicate to the receiver when all the currently known urgent data has been received.
+
+緊急の目的は、緊急データを処理するように受信者を刺激し、現在知られている緊急データがすべて受信されたことを受信者に知らせることです。
+
+>The number of times the sending user's TCP signals urgent will not necessarily be equal to the number of times the receiving user will be notified of the presence of urgent data.
+
+送信側ユーザのＴＣＰが緊急信号を送信する回数は、受信側ユーザが緊急データの存在を通知される回数に必ずしも等しいとは限らない。
+
+> If no foreign socket was specified in the OPEN, but the connection is established (e.g., because a LISTENing connection has become specific due to a foreign segment arriving for the local socket), then the designated buffer is sent to the implied foreign socket. 
+
+外部ソケットがオープンに指定されていないが、接続が確立されている場合（例えば、外部ソケットがローカルソケットに到着したためにLISTENing接続が特定になったため）、指定バッファは暗黙の外部ソケットに送信される。
+
+>Users who make use of OPEN with an unspecified foreign socket can make use of SEND without ever explicitly knowing the foreign socket address.
+
+未指定の外部ソケットでOPENを利用するユーザーは、外部ソケットアドレスを明示的に知らなくてもSENDを利用できます。
+
+>However, if a SEND is attempted before the foreign socket becomes specified, an error will be returned.  Users can use the STATUS call to determine the status of the connection.  In some implementations the TCP may notify the user when an unspecified socket is bound.
+
+ただし、外部ソケットが指定される前にSENDが試行された場合は、エラーが返されます。 ユーザーはSTATUS呼び出しを使用して接続の状況を判別できます。 いくつかの実装形態では、未指定のソケットがバインドされたときにTCPがユーザに通知することがあります。
+
+>If a timeout is specified, the current user timeout for this connection is changed to the new one.
+
+タイムアウトが指定されている場合、この接続に対する現在のユーザタイムアウトは新しいものに変更されます。
+
+>In the simplest implementation, SEND would not return control to the sending process until either the transmission was complete or the timeout had been exceeded.
+
+最も単純な実装では、SENDは送信が完了するかタイムアウトを超えるまで送信プロセスに制御を返しません。
+
+>However, this simple method is both subject to deadlocks (for example, both sides of the connection might try to do SENDs before doing any RECEIVEs) and offers poor performance, so it is not recommended.
+
+ただし、この単純な方法はどちらもデッドロックの影響を受け（たとえば、接続の両側でRECEIVEを実行する前にSENDを実行しようとする可能性がある）、パフォーマンスが低いため、お勧めできません。
+
+>A more sophisticated implementation would return immediately to allow the process to run concurrently with network I/O, and, furthermore, to allow multiple SENDs to be in progress.
+
+より洗練された実装はすぐに戻って、プロセスがネットワークI / Oと同時に実行することを可能にし、さらに複数のSENDが進行中であることを可能にするでしょう。
+
+>Multiple SENDs are served in first come, first served order, so the TCP will queue those it cannot service immediately.
+
+複数のSENDが先着順に処理されるため、TCPはすぐには処理できないものをキューに入れます。
+
+>We have implicitly assumed an asynchronous user interface in which a SEND later elicits some kind of SIGNAL or pseudo-interrupt from the serving TCP.  An alternative is to return a response immediately. 
+
+SENDが後でサービングTCPからある種のシグナルまたは擬似割り込みを引き出す非同期ユーザーインターフェースを暗黙のうちに仮定しました。 別の方法はすぐに応答を返すことです。
+
+>For instance, SENDs might return immediate local acknowledgment, even if the segment sent had not been acknowledged by the distant TCP.
+
+例えば、送信されたセグメントが遠くのTCPによって確認応答されていなくても、SENDは即時のローカル確認応答を返すかもしれません。
+
+>We could optimistically assume eventual success.
+
+我々は楽観的に最終的な成功を引き受けることができた。
+
+>If we are wrong, the connection will close anyway due to the timeout.
+
+間違っていると、タイムアウトにより接続が切断されます。
+
+>In implementations of this kind (synchronous), there will still be some asynchronous signals, but these will deal with the connection itself, and not with specific segments or buffers.
+
+この種の（同期）実装では、まだ非同期信号がいくつかありますが、これらは接続自体を処理し、特定のセグメントやバッファを処理することはありません。
+
+>In order for the process to distinguish among error or success indications for different SENDs, it might be appropriate for the  buffer address to be returned along with the coded response to the SEND request.  TCP-to-user signals are discussed below, indicating the information which should be returned to the calling process. 
+
+プロセスが異なるSENDに対するエラーまたは成功の表示を区別するためには、SEND要求に対するコード化された応答とともにバッファアドレスを返すことが適切な場合があります。 ＴＣＰからユーザへの信号については後述するが、これは呼出しプロセスに返されるべき情報を示している。
+
+```
+    Receive
+
+        Format:  RECEIVE (local connection name, buffer address, byte
+        count) -> byte count, urgent flag, push flag
+```
+
+>This command allocates a receiving buffer associated with the specified connection.  If no OPEN precedes this command or the calling process is not authorized to use this connection, an error is returned.
+
+このコマンドは、指定された接続に関連した受信バッファーを割り振ります。 このコマンドの前にOPENがないか、呼び出し側プロセスがこの接続を使用することを許可されていない場合、エラーが返されます。
+
+>In the simplest implementation, control would not return to the calling program until either the buffer was filled, or some error occurred, but this scheme is highly subject to deadlocks. A more sophisticated implementation would permit several RECEIVEs to be outstanding at once. 
+
+最も単純な実装では、バッファが一杯になるか、何らかのエラーが発生するまで、制御は呼び出し側プログラムに戻りませんが、この方式はデッドロックの影響を強く受けます。 より洗練された実装では、いくつかのRECEIVEを一度に未処理にすることができます。
+
+>These would be filled as segments arrive.  This strategy permits increased throughput at the cost of a more elaborate scheme (possibly asynchronous) to notify the calling program that a PUSH has been seen or a buffer filled.
+
+これらはセグメントが到着するといっぱいになります。 この方法では、PUSHが発生したこと、またはバッファがいっぱいになったことを呼び出し側プログラムに通知するための、より複雑な方法（おそらく非同期）を犠牲にしてスループットを向上させることができます。
+
+>If enough data arrive to fill the buffer before a PUSH is seen, the PUSH flag will not be set in the response to the RECEIVE. The buffer will be filled with as much data as it can hold.  If a PUSH is seen before the buffer is filled the buffer will be returned partially filled and PUSH indicated.
+
+PUSHが発生する前にバッファを満たすのに十分なデータが到着した場合、RECEIVEへの応答でPUSHフラグは設定されません。 バッファーには、保持できる量のデータがいっぱいになります。 バッファがいっぱいになる前にPUSHが見られる場合、バッファは部分的にいっぱいになって返され、PUSHが示されます。
+
+>If there is urgent data the user will have been informed as soon as it arrived via a TCP-to-user signal.  The receiving user should thus be in "urgent mode".  If the URGENT flag is on, additional urgent data remains.
+
+緊急のデータがある場合は、TCP-to-userシグナルを介して到着したらすぐにユーザーに通知されます。 したがって、受信ユーザーは「緊急モード」になっているはずです。 緊急フラグがオンの場合は、追加の緊急データが残ります。
+
+>If the URGENT flag is off, this call to RECEIVE has returned all the urgent data, and the user may now leave "urgent mode".  Note that data following the urgent pointer (non-urgent data) cannot be delivered to the user in the same buffer with preceeding urgent data unless the boundary is clearly marked for the user.
+
+URGENTフラグがオフの場合、RECEIVEへのこの呼び出しはすべての緊急データを返したので、ユーザーは「緊急モード」を終了することができます。 緊急ポインタに続くデータ（緊急でないデータ）は、境界がユーザに対して明確にマークされていない限り、先行する緊急データと同じバッファでユーザに配信することはできません。
+
+>To distinguish among several outstanding RECEIVEs and to take care of the case that a buffer is not completely filled, the return code is accompanied by both a buffer pointer and a byte count indicating the actual length of the data received.
+
+いくつかの未解決のRECEIVEを区別し、バッファーが完全にいっぱいになっていない場合に対処するために、戻りコードにはバッファー・ポインターと受信データの実際の長さを示すバイト数の両方が付随します。
+
+>Alternative implementations of RECEIVE might have the TCP allocate buffer storage, or the TCP might share a ring buffer with the user.
+
+RECEIVEの代替実装では、TCPにバッファストレージを割り当てさせる、またはTCPがリングバッファをユーザと共有することがあります。
+
+```
+      Close
+
+        Format:  CLOSE (local connection name)
+```
+
+>This command causes the connection specified to be closed.  If the connection is not open or the calling process is not authorized to use this connection, an error is returned.
+
+このコマンドにより、指定された接続が閉じられます。 接続がオープンされていないか、呼び出し側プロセスがこの接続を使用することを許可されていない場合は、エラーが返されます。
+
+>Closing connections is intended to be a graceful operation in the sense that outstanding SENDs will be transmitted (and retransmitted), as flow control permits, until all have been serviced.
+
+接続を閉じることは、すべてが処理されるまで、フロー制御が許す限り、未解決のSENDが送信される（そして再送信される）という意味での優雅な操作であることを意図しています。
+
+>Thus, it should be acceptable to make several SEND calls, followed by a CLOSE, and expect all the data to be sent to the destination.
+
+したがって、複数のSEND呼び出しに続けてCLOSEを呼び出し、すべてのデータが宛先に送信されることを想定してもかまいません。
+
+>It should also be clear that users should continue to RECEIVE on CLOSING connections, since the other side may be trying to transmit the last of its data.
+
+相手側が最後のデータを送信しようとしている可能性があるため、ユーザーはCLOSING接続で受信を継続する必要があることも明らかになります。
+
+>Thus, CLOSE means "I have no more to send" but does not mean "I will not receive any more."  It may happen (if the user level protocol is not well thought out) that the closing side is unable to get rid of all its data before timing out.  In this event, CLOSE turns into ABORT, and the closing TCP gives up.
+
+したがって、CLOSEは「送信するものがこれ以上ない」という意味ですが、「これ以上受信することはない」という意味ではありません。 （ユーザレベルのプロトコルがよく考えられていない場合は）クローズサイドがタイムアウトする前にすべてのデータを削除できない可能性があります。 この場合、CLOSEはABORTに変わり、閉じているTCPはあきらめます。
+
+>The user may CLOSE the connection at any time on his own initiative, or in response to various prompts from the TCP (e.g., remote close executed, transmission timeout exceeded, destination inaccessible).
+
+ユーザは、自分の主導で、またはＴＣＰからのさまざまなプロンプトに応答して（たとえば、リモートクローズが実行された、送信タイムアウトを超えた、宛先にアクセスできない）、いつでも接続を閉じることができる。
+
+>Because closing a connection requires communication with the foreign TCP, connections may remain in the closing state for a short time.  Attempts to reopen the connection before the TCP replies to the CLOSE command will result in error responses.
+
+接続を閉じるには外部のTCPとの通信が必要なので、接続はしばらくの間閉じた状態のままになります。 TCPがCLOSEコマンドに応答する前に接続を再開しようとすると、エラー応答が返されます。
+
+>Close also implies push function.
+
+CLoseはまたプッシュ機能も意味します。
+
+```
+      Status
+
+        Format:  STATUS (local connection name) -> status data
+```
+
+>This is an implementation dependent user command and could be excluded without adverse effect.  Information returned would typically come from the TCB associated with the connection.
+
+これは実装依存のユーザコマンドであり、悪影響を与えることなく除外できます。 返される情報は通常、接続に関連したTCBから来ます。
+
+>This command returns a data block containing the following information:
+
+このコマンドは以下を含むデータブロックを返します.
+
+```
+          local socket,
+          foreign socket,
+          local connection name,
+          receive window,
+          send window,
+          connection state,
+          number of buffers awaiting acknowledgment,
+          number of buffers pending receipt,
+          urgent state,
+          precedence,
+          security/compartment,
+          and transmission timeout.
+```
+
+>Depending on the state of the connection, or on the implementation itself, some of this information may not be available or meaningful.  If the calling process is not authorized to use this connection, an error is returned.  This prevents unauthorized processes from gaining information about a connection.
+
+接続の状態や実装自体によっては、この情報の一部が利用できない、または意味がない場合があります。 呼び出しプロセスがこの接続を使用することを許可されていない場合は、エラーが返されます。 これにより、許可されていないプロセスが接続に関する情報を取得するのを防ぎます。
+
+```
+      Abort
+
+        Format:  ABORT (local connection name)
+```
+
+>This command causes all pending SENDs and RECEIVES to be aborted, the TCB to be removed, and a special RESET message to be sent to the TCP on the other side of the connection.
+
+このコマンドによって、保留中のすべてのSENDとRECEIVESが中止され、TCBが削除され、接続の反対側のTCPに特別なRESETメッセージが送信されます。
+
+>Depending on the implementation, users may receive abort indications for each outstanding SEND or RECEIVE, or may simply receive an ABORT-acknowledgment.
+
+実装によっては、ユーザーは未処理のSENDまたはRECEIVEごとに中止指示を受け取るか、単にABORT確認を受け取ることがあります。
+
+#### TCP-to-User Messages
+
+>It is assumed that the operating system environment provides a means for the TCP to asynchronously signal the user program.
+
+オペレーティングシステム環境は、ＴＣＰが非同期にユーザプログラムに信号を送るための手段を提供すると仮定される。
+
+>When the TCP does signal a user program, certain information is passed to the user.  Often in the specification the information will be an error message.
+
+TCPがユーザープログラムに信号を送ると、特定の情報がユーザーに渡されます。 多くの場合、この仕様ではエラーメッセージが表示されます。
+
+>Often in the specification the information will be an error message.  In other cases there will be information relating to the completion of processing a SEND or RECEIVE or other user call.
+
+多くの場合、この仕様ではエラーメッセージが表示されます。 他の場合では、SENDまたはRECEIVEまたは他のユーザー呼び出しの処理の完了に関する情報があります。
+
+>The following information is provided:
+
+```
+        Local Connection Name                    Always
+        Response String                          Always
+        Buffer Address                           Send & Receive
+        Byte count (counts bytes received)       Receive
+        Push flag                                Receive
+        Urgent flag                              Receive
+```
+
+#### TCP/Lower-Level Interface
+
+>The TCP calls on a lower level protocol module to actually send and receive information over a network.
+
+ＴＣＰは、ネットワークを介して実際に情報を送受信するために低レベルのプロトコルモジュールを呼び出す。
+
+>One case is that of the ARPA internetwork system where the lower level module is the Internet Protocol (IP) [2].
+
+1つのケースは、下位モジュールがインターネットプロトコル（IP）であるARPAインターネットワークシステムのそれです[2]。
+
+>If the lower level protocol is IP it provides arguments for a type of service and for a time to live.  TCP uses the following settings for these parameters:
+
+下位レベルのプロトコルがIPの場合は、サービスの種類と存続期間に関する引数を提供します。 TCPはこれらのパラメータに次の設定を使用します。
+
+```
+      Type of Service = Precedence: routine, Delay: normal, Throughput:
+      normal, Reliability: normal; or 00000000.
+
+      Time to Live    = one minute, or 00111100.
+```
+
+>Note that the assumed maximum segment lifetime is two minutes. Here we explicitly ask that a segment be destroyed if it cannot be delivered by the internet system within one minute.
+
+想定される最大セグメント寿命は2分です。 ここでは、1分以内にインターネットシステムで配信できない場合、そのセグメントを破棄するように明示的に依頼します。
+
+>If the lower level is IP (or other protocol that provides this feature) and source routing is used, the interface must allow the route information to be communicated.
+
+下位レベルがIP（またはこの機能を提供する他のプロトコル）であり、ソースルーティングが使用されている場合、インターフェイスはルート情報の通信を許可する必要があります。
+
+>This is especially important so that the source and destination addresses used in the TCP checksum be the originating source and ultimate destination. It is also important to preserve the return route to answer connection requests.
+
+TCPチェックサムで使用される送信元および宛先アドレスが発信元および最終宛先になるように、これは特に重要です。 接続要求に答えるためにリターンルートを維持することも重要です。
+
+>Any lower level protocol will have to provide the source address, destination address, and protocol fields, and some way to determine the "TCP length", both to provide the functional equivlent service of IP and to be used in the TCP checksum.
+
+下位レベルのプロトコルでは、送信元アドレス、宛先アドレス、およびプロトコルフィールドを提供し、「TCPの長さ」を決定するための何らかの方法でIPと同等の機能を提供し、TCPチェックサムで使用する必要があります。
+
+#### 3.9.  Event Processing
+
+>he processing depicted in this section is an example of one possible implementation.
+
+このセクションに示されている処理は、1つの可能な実装の例です。
+
+>Other implementations may have slightly different processing sequences, but they should differ from those in this section only in detail, not in substance.
+
+他の実装はわずかに異なる処理シーケンスを持っているかもしれませんが、それらは実質的にではなく、詳細においてのみこのセクションのものと異なるはずです。
+
+>The activity of the TCP can be characterized as responding to events. The events that occur can be cast into three categories:  user calls, arriving segments, and timeouts. 
+
+TCPのアクティビティは、イベントに応答していると見なすことができます。 発生するイベントは、ユーザー呼び出し、到着セグメント、およびタイムアウトという3つのカテゴリーに分類できます。
+
+>This section describes the processing the TCP does in response to each of the events.  In many cases the processing required depends on the state of the connection.
+
+このセクションでは、各イベントに応答してTCPが実行する処理について説明します。 多くの場合、必要な処理は接続の状態によって異なります。
+
+>Events that occur:
+
+```
+      User Calls
+
+        OPEN
+        SEND
+        RECEIVE
+        CLOSE
+        ABORT
+        STATUS
+
+      Arriving Segments
+
+        SEGMENT ARRIVES
+
+      Timeouts
+
+        USER TIMEOUT
+        RETRANSMISSION TIMEOUT
+        TIME-WAIT TIMEOUT
+```
+
+>The model of the TCP/user interface is that user commands receive an immediate return and possibly a delayed response via an event or pseudo interrupt.  In the following descriptions, the term "signal" means cause a delayed response.
+
+TCP /ユーザインタフェースのモデルは、ユーザコマンドがイベントまたは疑似割り込みを介して即時リターンと、場合によっては遅延応答を受け取ることです。 以下の説明において、「信号」という用語は遅延応答を引き起こすことを意味する。
+
+>Error responses are given as character strings.  For example, user commands referencing connections that do not exist receive "error: connection not open".
+
+エラー応答は文字列として与えられます。 たとえば、存在しない接続を参照するユーザーコマンドは「エラー：接続が開いていません」を受け取ります。
+
+>Please note in the following that all arithmetic on sequence numbers, acknowledgment numbers, windows, et cetera, is modulo 2**32 the size of the sequence number space.  
+
+以下では、シーケンス番号、確認応答番号、ウィンドウなどに関するすべての算術演算が、シーケンス番号空間のサイズの2を法とすることに注意してください。
+
+>Also note that "=<" means less than or equal to (modulo 2**32).
+
+また、 "= <"は（modulo 2 ** 32）以下を意味します。
+
+>A natural way to think about processing incoming segments is to imagine that they are first tested for proper sequence number (i.e., that their contents lie in the range of the expected "receive window" in the sequence number space) and then that they are generally queued and processed in sequence number order.
+
+入ってくるセグメントを処理することについて考える自然な方法は、それらが最初に適切なシーケンス番号についてテストされていること（すなわち、それらの内容がシーケンス番号空間の予想される「受信ウィンドウ」の範囲内にある）と想像することです。 シーケンス番号順にキューに入れられ、処理されます。
+
+>When a segment overlaps other already received segments we reconstruct the segment to contain just the new data, and adjust the header fields to be consistent.
+
+あるセグメントが他のすでに受信済みのセグメントと重なっている場合は、新しいデータだけを含むようにセグメントを再構築し、ヘッダーフィールドが一致するように調整します。
+
+>Note that if no state change is mentioned the TCP stays in the same state.
+
+状態の変化が言及されていない場合、TCPは同じ状態に留まります。
+
+```
+  OPEN Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>Create a new transmission control block (TCB) to hold connection state information.  Fill in local socket identifier, foreign socket, precedence, security/compartment, and user timeout information.
+
+接続状態情報を保持するための新しい伝送制御ブロック（TCB）を作成します。 ローカルソケット識別子、外部ソケット、優先順位、セキュリティ/コンパートメント、およびユーザータイムアウト情報を入力します。
+
+>Note that some parts of the foreign socket may be unspecified in a passive OPEN and are to be filled in by the parameters of the incoming SYN segment.
+
+外部ソケットのいくつかの部分は受動的OPENで指定されていないかもしれず、入ってくるSYNセグメントのパラメータで埋められることになっていることに注意してください。
+
+>Verify the security and precedence requested are allowed for this user, if not return "error:  precedence not allowed" or "error:  security/compartment not allowed."  If passive enter the LISTEN state and return.
+
+「error：優先順位が許可されていません」または「error：セキュリティ/コンパートメントが許可されていません」が返されない場合は、要求されたセキュリティおよび優先順位がこのユーザーに許可されていることを確認します。 受動的ならLISTEN状態に入って戻る。
+
+>If active and the foreign socket is unspecified, return "error: foreign socket unspecified"; if active and the foreign socket is specified, issue a SYN segment.
+
+アクティブで外部ソケットが指定されていない場合、 "error：foreign socket unspecified"を返します。 アクティブで外部ソケットが指定されている場合は、SYNセグメントを発行してください。
+
+>An initial send sequence number (ISS) is selected.
+
+初期送信シーケンス番号（ISS）が選択されています。
+
+>A SYN segment of the form <SEQ=ISS><CTL=SYN> is sent.
+
+<SEQ = ISS> <CTL = SYN>の形式のSYNセグメントが送信されます。
+
+>Set SND.UNA to ISS, SND.NXT to ISS+1, enter SYN-SENT state, and return.
+
+SND.UNAをISSに、SND.NXTをISS + 1に設定し、SYN-SENT状態に入り、そして戻ります。
+
+>If the caller does not have access to the local socket specified, return "error:  connection illegal for this process".  If there is no room to create a new connection, return "error:  insufficient resources".
+
+呼び出し側が指定されたローカルソケットにアクセスできない場合は、「エラー：このプロセスには接続が不正です」を返します。 新しい接続を作成する余地がない場合は、「エラー：リソース不足」を返します。
+
+#### LISTEN STATE
+
+>If active and the foreign socket is specified, then change the connection from passive to active, select an ISS. 
+
+アクティブで外部ソケットが指定されている場合は、接続をパッシブからアクティブに変更して、ISSを選択してください。
+
+>Send a SYN segment, set SND.UNA to ISS, SND.NXT to ISS+1.  Enter SYN-SENT state.  Data associated with SEND may be sent with SYN segment or queued for transmission after entering ESTABLISHED state.
+
+SYNセグメントを送信し、SND.UNAをISSに、SND.NXTをISS + 1に設定します。 SYN-SENT状態に入ります。 SENDに関連したデータは、SYNセグメントとともに送信されるか、またはESTABLISHED状態に入った後に送信のためにキューに入れられることがあります。
+
+>The urgent bit if requested in the command must be sent with the data segments sent as a result of this command.  
+
+コマンドで要求された場合、緊急ビットは、このコマンドの結果として送信されたデータセグメントと一緒に送信する必要があります。
+
+>If there is no room to queue the request, respond with "error:  insufficient resources". If Foreign socket was not specified, then return "error:  foreign socket unspecified".
+
+要求をキューに入れる余地がない場合は、「エラー：リソース不足」で応答してください。 外部ソケットが指定されていない場合は、「エラー：外部ソケットが指定されていません」を返します。
+
+```
+    SYN-SENT STATE
+    SYN-RECEIVED STATE
+    ESTABLISHED STATE
+    FIN-WAIT-1 STATE
+    FIN-WAIT-2 STATE
+    CLOSE-WAIT STATE
+    CLOSING STATE
+    LAST-ACK STATE
+    TIME-WAIT STATE
+```
+
+>Return "error:  connection already exists".
+
+「エラー：接続はすでに存在しています」を返します。
+
+```
+  SEND Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>If the user does not have access to such a connection, then return "error:  connection illegal for this process".
+
+ユーザーがそのような接続にアクセスできない場合は、「エラー：このプロセスには接続が不正です」を返します。
+
+>Otherwise, return "error:  connection does not exist".
+
+そうでなければ、 "error：connection does not exist"を返します.
+
+#### LISTEN STATE
+
+>If the foreign socket is specified, then change the connection from passive to active, select an ISS.
+
+外部ソケットが指定されている場合は、接続をパッシブからアクティブに変更し、ISSを選択してください。
+
+>Send a SYN segment, set SND.UNA to ISS, SND.NXT to ISS+1.  Enter SYN-SENT state.
+
+SYNセグメントを送信し、SND.UNAをISSに、SND.NXTをISS + 1に設定します。 SYN-SENT状態に入ります。
+
+>Data associated with SEND may be sent with SYN segment or queued for transmission after entering ESTABLISHED state.
+
+SENDに関連したデータは、SYNセグメントとともに送信されるか、またはESTABLISHED状態に入った後に送信のためにキューに入れられることがあります。
+
+>The urgent bit if requested in the command must be sent with the data segments sent as a result of this command.
+
+コマンドで要求された場合、緊急ビットは、このコマンドの結果として送信されたデータセグメントと一緒に送信する必要があります。
+
+>If there is no room to queue the request, respond with "error:  insufficient resources".  If Foreign socket was not specified, then return "error:  foreign socket unspecified".
+
+要求をキューに入れる余地がない場合は、「エラー：リソース不足」で応答してください。 外部ソケットが指定されていない場合は、「エラー：外部ソケットが指定されていません」を返します。
+
+```
+    SYN-SENT STATE
+    SYN-RECEIVED STATE
+```
+
+>Queue the data for transmission after entering ESTABLISHED state. If no space to queue, respond with "error:  insufficient resources".
+
+ESTABLISHED状態に入った後、送信用データをキューに入れます。 キューに入れるスペースがない場合は、「エラー：リソース不足」で応答してください。
+
+```
+    ESTABLISHED STATE
+    CLOSE-WAIT STATE
+```
+
+>Segmentize the buffer and send it with a piggybacked acknowledgment (acknowledgment value = RCV.NXT).  If there is insufficient space to remember this buffer, simply return "error: insufficient resources".
+
+バッファをセグメント化して、ピギーバックされた確認応答（確認応答値= RCV.NXT）で送信します。 このバッファを記憶するのに十分なスペースがない場合は、単に「エラー：リソース不足」を返してください。
+
+>If the urgent flag is set, then SND.UP <- SND.NXT-1 and set the urgent pointer in the outgoing segments.
+
+緊急フラグが設定されている場合、SND.UP < -  SND.NXT-1となり、発信セグメントに緊急ポインタが設定されます。
+
+```
+    FIN-WAIT-1 STATE
+    FIN-WAIT-2 STATE
+    CLOSING STATE
+    LAST-ACK STATE
+    TIME-WAIT STATE
+```
+
+>Return "error:  connection closing" and do not service request.
+
+"error：connection closing"を返してサービスリクエストをしないでください。
+
+```
+  RECEIVE Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>If the user does not have access to such a connection, return "error:  connection illegal for this process".
+
+ユーザーがそのような接続にアクセスできない場合は、「エラー：このプロセスには接続が不正です」を返してください。
+
+>Otherwise return "error:  connection does not exist".
+
+そうでなければ "error：connection does not exist"を返します。
+
+```
+    LISTEN STATE
+    SYN-SENT STATE
+    SYN-RECEIVED STATE
+```
+
+>Queue for processing after entering ESTABLISHED state.  If there is no room to queue this request, respond with "error: insufficient resources".
+
+ESTABLISHED状態に入った後の処理のためのキュー。 この要求をキューに入れる余地がない場合は、「エラー：リソース不足」で応答してください。
+
+```
+    ESTABLISHED STATE
+    FIN-WAIT-1 STATE
+    FIN-WAIT-2 STATE
+```
+
+>If insufficient incoming segments are queued to satisfy the request, queue the request.  If there is no queue space to remember the RECEIVE, respond with "error:  insufficient resources".
+
+要求を満たすのに不十分な着信セグメントがキューに入れられている場合は、要求をキューに入れます。 RECEIVEを記憶するためのキュースペースがない場合は、「エラー：リソース不足」で応答してください。
+
+>Reassemble queued incoming segments into receive buffer and return to user.  Mark "push seen" (PUSH) if this is the case.
+
+キューに入ってきた入力セグメントを受信バッファーに再アセンブルして、ユーザーに戻ります。 この場合は、「プッシュプッシュ」（PUSH）とマークします。
+
+>If RCV.UP is in advance of the data currently being passed to the user notify the user of the presence of urgent data.
+
+RCV.UPが現在ユーザーに渡されているデータより前の場合は、緊急データの存在をユーザーに通知します。
+
+>When the TCP takes responsibility for delivering data to the user that fact must be communicated to the sender via an acknowledgment.  The formation of such an acknowledgment is described below in the discussion of processing an incoming segment.
+
+TCPがユーザーにデータを配信する責任を負うとき、その事実は確認応答を介して送信者に伝えられなければなりません。 そのような確認応答の形成については、着信セグメントの処理の説明で後述します。
+
+```
+    CLOSE-WAIT STATE
+```
+
+>Since the remote side has already sent FIN, RECEIVEs must be satisfied by text already on hand, but not yet delivered to the user.  
+
+リモート側はすでにFINを送信しているので、RECEIVEはすでに手元にあるテキストによって満たされる必要がありますが、まだユーザーには配信されません。
+
+>If no text is awaiting delivery, the RECEIVE will get a "error:  connection closing" response.  Otherwise, any remaining text can be used to satisfy the RECEIVE.
+
+配信待ちのテキストがない場合、RECEIVEは "error：connection closing"応答を受け取ります。 それ以外の場合は、残りのテキストを使用してRECEIVEを満たすことができます。
+
+```
+    CLOSING STATE
+    LAST-ACK STATE
+    TIME-WAIT STATE
+```
+
+>Return "error:  connection closing".
+
+"error：connection closing"を返します。
+
+```
+  CLOSE Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>If the user does not have access to such a connection, return "error:  connection illegal for this process".
+
+ユーザーがそのような接続にアクセスできない場合は、「エラー：このプロセスには接続が不正です」を返してください。
+
+>Otherwise, return "error:  connection does not exist".
+
+そうでなければ、 "error：connection does not exist"を返す.
+
+```
+    LISTEN STATE
+```
+
+>Any outstanding RECEIVEs are returned with "error:  closing" responses.  Delete TCB, enter CLOSED state, and return.
+
+未解決のRECEIVEは "error：closing"応答とともに返されます。 TCBを削除してCLOSED状態に入り、そして戻ります。
+
+```
+    SYN-SENT STATE
+```
+
+>Delete the TCB and return "error:  closing" responses to any queued SENDs, or RECEIVEs.
+
+TCBを削除し、キューに入れられたSENDまたはRECEIVEに対して "error：closing"応答を返します。
+
+```
+    ESTABLISHED STATE
+```
+
+>Queue this until all preceding SENDs have been segmentized, then form a FIN segment and send it.  In any case, enter FIN-WAIT-1 state.
+
+先行するすべてのSENDが細分化されるまでこれを待ち行列に入れ、次にFINセグメントを形成してそれを送信します。 いずれにせよ、FIN-WAIT-1状態に入ります。
+
+```
+    FIN-WAIT-1 STATE
+    FIN-WAIT-2 STATE
+```
+
+>Strictly speaking, this is an error and should receive a "error: connection closing" response.  An "ok" response would be acceptable, too, as long as a second FIN is not emitted (the first FIN may be retransmitted though).
+
+厳密に言うと、これはエラーであり、「error：connection closing」という応答を受け取るはずです。 2番目のFINが発行されない限り（最初のFINが再送されるかもしれません）、 "ok"応答も許容されるでしょう。
+
+```
+    CLOSE-WAIT STATE
+```
+
+>Queue this request until all preceding SENDs have been segmentized; then send a FIN segment, enter CLOSING state.
+
+先行するすべてのSENDがセグメント化されるまで、この要求を待ち行列に入れます。 その後FINセグメントを送信し、CLOSING状態に入ります。
+
+```
+    CLOSING STATE
+    LAST-ACK STATE
+    TIME-WAIT STATE
+```
+
+>Respond with "error:  connection closing".
+
+error：connection closing"を返す.
+
+```
+  ABORT Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>If the user should not have access to such a connection, return "error:  connection illegal for this process".
+
+ユーザーがそのような接続にアクセスできないようにするには、「エラー：このプロセスには接続が不正です」を返します。     
+		 
+>Otherwise return "error:  connection does not exist".
+
+そうでなければ "error：connection does not exist"を返します。
+
+```
+    LISTEN STATE
+```
+
+>Any outstanding RECEIVEs should be returned with "error: connection reset" responses.  Delete TCB, enter CLOSED state, and return.
+
+未解決のRECEIVEは "error：connection reset"応答とともに返されるべきです。 TCBを削除してCLOSED状態に入り、そして戻ります。
+
+```
+    SYN-SENT STATE
+```
+
+>All queued SENDs and RECEIVEs should be given "connection reset" notification, delete the TCB, enter CLOSED state, and return.
+
+すべてのキューに入れられたSENDとRECEIVEは "接続リセット"通知を与えられ、TCBを削除し、CLOSED状態に入り、そして戻るべきです。
+
+```
+    SYN-RECEIVED STATE
+    ESTABLISHED STATE
+    FIN-WAIT-1 STATE
+    FIN-WAIT-2 STATE
+    CLOSE-WAIT STATE
+```
+
+>Send a reset segment:
+
+```
+        <SEQ=SND.NXT><CTL=RST>
+```
+
+>All queued SENDs and RECEIVEs should be given "connection reset" notification; all segments queued for transmission (except for the RST formed above) or retransmission should be flushed, delete the TCB, enter CLOSED state, and return.
+
+すべてのキューに入れられたSENDとRECEIVEは "接続リセット"通知を与えられるべきです。 送信（上記で形成されたRSTを除く）または再送信のためにキューに入れられたすべてのセグメントはフラッシュされ、TCBを削除し、CLOSED状態に入り、そして戻ります。
+
+```
+    CLOSING STATE
+    LAST-ACK STATE
+    TIME-WAIT STATE
+```
+
+>Respond with "ok" and delete the TCB, enter CLOSED state, and return.
+
+"ok"で応答してTCBを削除し、CLOSED状態に入り、そして戻ります。
+
+```
+  STATUS Call
+
+    CLOSED STATE (i.e., TCB does not exist)
+```
+
+>If the user should not have access to such a connection, return "error:  connection illegal for this process".
+
+ユーザーがそのような接続にアクセスできないようにするには、「エラー：このプロセスには接続が不正です」を返します。
+
+>Otherwise return "error:  connection does not exist".
+
+そうでなければ "error：connection does not exist"を返します。
+
+```
+    LISTEN STATE
+```
+
+>Return "state = LISTEN", and the TCB pointer.
+
+"state = LISTEN"とTCBポインタを返します。
+
+```
+    SYN-SENT STATE
+```
+
+>Return "state = SYN-SENT", and the TCB pointer.
+
+"state = SYN-SENT"とTCBポインタを返します。
+
+```
+    SYN-RECEIVED STATE
+```
+
+>Return "state = SYN-RECEIVED", and the TCB pointer.
+
+"state = SYN-RECEIVED"とTCBポインタを返します。
+
+```
+    ESTABLISHED STATE
+```
+
+>Return "state = ESTABLISHED", and the TCB pointer.
+
+"state = ESTABLISHED"とTCBポインタを返します。
+
+```
+    FIN-WAIT-1 STATE
+```
+
+>Return "state = FIN-WAIT-1", and the TCB pointer.
+
+"state = FIN-WAIT-1"とTCBポインタを返します。
+
+```
+    FIN-WAIT-2 STATE
+```
+
+>Return "state = FIN-WAIT-2", and the TCB pointer.
+
+"state = FIN-WAIT-2"とTCBポインタを返します。
+
+```
+    CLOSE-WAIT STATE
+```
+
+>Return "state = CLOSE-WAIT", and the TCB pointer.
+
+"state = CLOSE-WAIT"とTCBポインタを返します。
+
+```
+    CLOSING STATE
+```
+
+>Return "state = CLOSING", and the TCB pointer.
+
+"state = CLOSING"とTCBポインタを返します。
+
+```
+    LAST-ACK STATE
+```
+
+>Return "state = LAST-ACK", and the TCB pointer.
+
+"state = LAST-ACK"とTCBポインタを返します。
+
+```
+    TIME-WAIT STATE
+```
+
+>Return "state = TIME-WAIT", and the TCB pointer.
+
+"state = TIME-WAIT"とTCBポインタを返します。
+
+####   SEGMENT ARRIVES
+
+##### If the state is CLOSED (i.e., TCB does not exist) then
+
+>all data in the incoming segment is discarded.  An incoming segment containing a RST is discarded.  An incoming segment not containing a RST causes a RST to be sent in response.
+
+着信セグメント内のすべてのデータは破棄されます。 RSTを含む着信セグメントは破棄されます。 RSTを含まない着信セグメントは、応答としてRSTを送信します。
+
+>The acknowledgment and sequence field values are selected to make the reset sequence acceptable to the TCP that sent the offending segment.
+
+確認応答とシーケンスフィールドの値は、問題のセグメントを送信したTCPがリセットシーケンスを受け入れられるように選択されます。
+
+>If the ACK bit is off, sequence number zero is used,
+
+ACKビットがオフの場合、シーケンス番号0は
+
+```
+				<SEQ=0><ACK=SEG.SEQ+SEG.LEN><CTL=RST,ACK>
+```
+
+>If the ACK bit is on,
+
+ACKがオンの場合, 
+
+```
+        <SEQ=SEG.ACK><CTL=RST>
+```
+
+>Return.
+
+
+>If the state is LISTEN then
+
+もしLISTEN状態ならば, 
+
+>first check for an RST
+
+はじめにRSTをチェックし
+
+>An incoming RST should be ignored.  Return.
+
+受信RSTは無視され, 返される.
+
+>second check for an ACK
+
+2番目にACKをチェックし,
+
+>Any acknowledgment is bad if it arrives on a connection still in the LISTEN state.  An acceptable reset segment should be formed for any arriving ACK-bearing segment.  The RST should be formatted as follows:
+
+LISTEN状態のままの接続に到着した場合、確認応答は正しくありません。 受け入れ可能なリセットセグメントは、到着するすべてのACKを含むセグメントに対して形成されるべきです。 RSTは次のようにフォーマットされるべきです：
+
+```
+				<SEQ=SEG.ACK><CTL=RST>
+```
+
+>Return.
+
+
+>third check for a SYN
+
+3番目にSYNをチェックし,
+
+>If the SYN bit is set, check the security.  If the security/compartment on the incoming segment does not exactly match the security/compartment in the TCB then send a reset and return.
+
+SYNビットが設定されている場合は、セキュリティを確認してください。 入ってくるセグメントのセキュリティ/コンパートメントがTCBのセキュリティ/コンパートメントと完全に一致しないならば、リセットを送って戻る。
+
+```
+          <SEQ=SEG.ACK><CTL=RST>
+```
+
+>If the SEG.PRC is greater than the TCB.PRC then if allowed by the user and the system set TCB.PRC<-SEG.PRC, if not allowed send a reset and return.
+
+もしSEG.PRCがTCB.PRCより大きければ、もしユーザとシステムが許可していればTCB.PRC <-SEG.PRCをセットし、許可されていなければリセットを送って戻る。
+
+```
+          <SEQ=SEG.ACK><CTL=RST>
+```
+
+>If the SEG.PRC is less than the TCB.PRC then continue.
+
+ＳＥＧ．ＰＲＣがＴＣＢ．ＰＲＣより小さければ、次に続ける。
+
+>Set RCV.NXT to SEG.SEQ+1, IRS is set to SEG.SEQ and any other control or text should be queued for processing later.  ISS should be selected and a SYN segment sent of the form:
+
+RCV.NXTをSEG.SEQ + 1に設定し、IRSをSEG.SEQに設定し、その他の制御またはテキストは後で処理するためにキューに入れる必要があります。 ISSを選択し、SYNセグメントを次の形式で送信する必要があります。
+
+```
+          <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+```
+
+>SND.NXT is set to ISS+1 and SND.UNA to ISS.  The connection state should be changed to SYN-RECEIVED.  Note that any other incoming control or data (combined with SYN) will be processed in the SYN-RECEIVED state, but processing of SYN and ACK should not be repeated.  If the listen was not fully specified (i.e., the foreign socket was not fully specified), then the unspecified fields should be filled in now.
+
+SND.NXTはISS + 1に設定され、SND.UNAはISSに設定されます。 接続状態はSYN-RECEIVEDに変更する必要があります。 他の着信制御またはデータ（SYNと組み合わせて）はSYN-RECEIVED状態で処理されますが、SYNおよびACKの処理は繰り返されるべきではありません。 待機が完全に指定されていなかった（すなわち、外部ソケットが完全に指定されていなかった）場合は、未指定フィールドに今すぐ記入する必要があります。
+
+>fourth other text or control
+
+その他
+
+>Any other control or text-bearing segment (not containing SYN) must have an ACK and thus would be discarded by the ACK processing.  An incoming RST segment could not be valid, since it could not have been sent in response to anything sent by this incarnation of the connection.  So you are unlikely to get here, but if you do, drop the segment, and return.
+
+（SYNを含まない）他のコントロールまたはテキストを含むセグメントはACKを持っている必要があるため、ACK処理によって破棄されます。 それが接続のこの肉体化によって送られた何でもに応じて送られなかったかもしれないので入って来るRSTセグメントは有効であることができませんでした。 ですから、ここに来ることはまずありませんが、行った場合はそのセグメントをドロップしてから戻ってください。
+
+>If the state is SYN-SENT then
+
+SYN-SENT状態の場合,
+
+>first check the ACK bit
+
+はじめにACKをチェックし
+
+>If the ACK bit is set
+
+セットされていた場合
+
+>If SEG.ACK =< ISS, or SEG.ACK > SND.NXT, send a reset (unless the RST bit is set, if so drop the segment and return)
+
+SEG.ACK = <ISS、またはSEG.ACK> SND.NXTの場合、リセットを送信します（RSTビットが設定されている場合を除き、セグメントをドロップして戻ります）。
+
+```
+            <SEQ=SEG.ACK><CTL=RST>
+```
+
+>and discard the segment.  Return.
+
+セグメントを破棄し 戻る
+
+>If SND.UNA =< SEG.ACK =< SND.NXT then the ACK is acceptable.
+
+SND.UNA =< SEG.ACK =< SND.NXTの場合、ACKは受け入れ可能です。
+
+>second check the RST bit
+
+2番目にRSTbitをチェックして
+
+>If the RST bit is set
+
+セットされている場合
+
+>If the ACK was acceptable then signal the user "error: connection reset", drop the segment, enter CLOSED state, delete TCB, and return.  Otherwise (no ACK) drop the segment and return.
+
+ACKが受け入れられたならば、それからユーザに「エラー：接続リセット」を合図し、セグメントを落とし、CLOSED状態に入り、TCBを削除し、そして戻る。 そうでなければ（ＡＣＫなし）、セグメントを落として戻る。
+
+>third check the security and precedence
+
+3番目にsecurityとprecedenceをチェックし
+
+>If the security/compartment in the segment does not exactly match the security/compartment in the TCB, send a reset
+
+セグメントの証券/コンパートメントがTCBの証券/コンパートメントと完全に一致しない場合は、リセットを送信する.
+
+>If there is an ACK
+
+ACKがあれば
+
+```
+            <SEQ=SEG.ACK><CTL=RST>
+```
+
+>Otherwise
+
+そうでなければ
+
+```
+            <SEQ=0><ACK=SEG.SEQ+SEG.LEN><CTL=RST,ACK>
+```
+
+>fourth check the SYN bit
+
+4番目にSYNbitをチェックし
+
+>This step should be reached only if the ACK is ok, or there is no ACK, and it the segment did not contain a RST.
+
+このステップに到達する必要があるのは、ACKが正常であるか、またはACKがなく、セグメントにRSTが含まれていなかった場合です。
+
+>If the SYN bit is on and the security/compartment and precedence are acceptable then, RCV.NXT is set to SEG.SEQ+1, IRS is set to SEG.SEQ.  SND.UNA should be advanced to equal SEG.ACK (if there is an ACK), and any segments on the retransmission queue which are thereby acknowledged should be removed.
+
+SYNビットがオンで、セキュリティー/コンパートメントおよび優先順位が受け入れ可能である場合、RCV.NXTはSEG.SEQ + 1に設定され、IRSはSEG.SEQに設定されます。 （ＡＣＫがある場合）ＳＮＤ．ＵＮＡはＳＥＧ．ＡＣＫに等しくなるように進められるべきであり、それによって確認応答される再送信キュー上の任意のセグメントは除去されるべきである。
+
+>If SND.UNA > ISS (our SYN has been ACKed), change the connection state to ESTABLISHED, form an ACK segment
+
+AND.UAN> ISS（SYNが確認されている）の場合は、接続状態をESTABLISHEDに変更し、ACKセグメントを形成します。
+
+```
+          <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+```
+
+>and send it.  Data or controls which were queued for transmission may be included.  If there are other controls or text in the segment then continue processing at the sixth step below where the URG bit is checked, otherwise return.
+
+そしてそれを送る。 送信のためにキューに入れられたデータまたは制御が含まれてもよい。 セグメント内に他のコントロールまたはテキストがある場合は、URGビットがチェックされる以下の6番目のステップから処理を続行し、それ以外の場合は戻ります。
+
+>Otherwise enter SYN-RECEIVED, form a SYN,ACK segment
+
+そうでなければSYN-RECEIVEDを入力し、SYN、ACKセグメントを形成する
+
+```
+          <SEQ=ISS><ACK=RCV.NXT><CTL=SYN,ACK>
+```
+
+>and send it.  If there are other controls or text in the segment, queue them for processing after the ESTABLISHED state has been reached, return.
+
+そしてそれを送る。 セグメント内に他のコントロールまたはテキストがある場合は、ESTABLISHED状態に達した後でそれらを処理のためにキューに入れ、戻ります。
+
+>fifth, if neither of the SYN or RST bits is set then drop the segment and return.
+
+5番目に、SYNビットもRSTビットも設定されていない場合は、セグメントをドロップして戻ります。
+
+>Otherwise, first check sequence number
+
+そうでなければ、最初にシーケンス番号をチェックする。
+
+```
+      SYN-RECEIVED STATE
+      ESTABLISHED STATE
+      FIN-WAIT-1 STATE
+      FIN-WAIT-2 STATE
+      CLOSE-WAIT STATE
+      CLOSING STATE
+      LAST-ACK STATE
+      TIME-WAIT STATE
+```
+
+>Segments are processed in sequence.  Initial tests on arrival are used to discard old duplicates, but further processing is done in SEG.SEQ order.  If a segment's contents straddle the boundary between old and new, only the new parts should be processed.
+
+セグメントは順番に処理されます。 到着時の初期テストは古い重複を破棄するために使用されますが、それ以降の処理はSEG.SEQの順序で行われます。 セグメントの内容が新旧の境界をまたいでいる場合は、新しい部分だけを処理する必要があります。
+
+>There are four cases for the acceptability test for an incoming segment:
+
+着信セグメントの受け入れ可能性テストには4つのケースがあります。
+
+```
+        Segment Receive  Test
+        Length  Window
+        ------- -------  -------------------------------------------
+
+           0       0     SEG.SEQ = RCV.NXT
+
+           0      >0     RCV.NXT =< SEG.SEQ < RCV.NXT+RCV.WND
+
+          >0       0     not acceptable
+
+          >0      >0     RCV.NXT =< SEG.SEQ < RCV.NXT+RCV.WND
+                      or RCV.NXT =< SEG.SEQ+SEG.LEN-1 < RCV.NXT+RCV.WND
+```
+
+>If the RCV.WND is zero, no segments will be acceptable, but special allowance should be made to accept valid ACKs, URGs and RSTs.
+
+RCV.WNDが0の場合、どのセグメントも受け入れられませんが、有効なACK、URG、およびRSTを受け入れるために特別な許可が必要です。
+
+>If an incoming segment is not acceptable, an acknowledgment should be sent in reply (unless the RST bit is set, if so drop the segment and return):
+
+入ってくるセグメントが受け入れられないなら、（RSTビットが設定されていないなら、セグメントを落として戻ってくる）応答で応答を送るべきです
+
+```
+          <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+```
+
+>After sending the acknowledgment, drop the unacceptable segment and return.
+
+確認応答を送信した後、不適切なセグメントを削除して戻ります。
+
+>In the following it is assumed that the segment is the idealized segment that begins at RCV.NXT and does not exceed the window. One could tailor actual segments to fit this assumption by trimming off any portions that lie outside the window (including SYN and FIN), and only processing further if the segment then begins at RCV.NXT.  Segments with higher begining sequence numbers may be held for later processing.
+
+以下では、セグメントはRCV.NXTで始まり、ウィンドウを超えない理想化されたセグメントであると想定されています。 ウィンドウの外側にある部分（SYNとFINを含む）を切り捨てて、セグメントがRCV.NXTから始まる場合にのみさらに処理することによって、この仮定に合うように実際のセグメントを調整することができます。 より高い開始シーケンス番号を持つセグメントは後の処理のために保持されるかもしれません。
+
+>second check the RST bit,
+
+2番目にRTSbitをチェックし
+
+```
+      SYN-RECEIVED STATE
+```
+
+>If the RST bit is set
+
+RSTbitがセットされていたら
+
+>If this connection was initiated with a passive OPEN (i.e., came from the LISTEN state), then return this connection to LISTEN state and return.  The user need not be informed.  If this connection was initiated with an active OPEN (i.e., came from SYN-SENT state) then the connection was refused, signal the user "connection refused".  In either case, all segments on the retransmission queue should be removed.  And in the active OPEN case, enter the CLOSED state and delete the TCB, and return.
+
+この接続が受動的ＯＰＥＮで開始された（すなわち、ＬＩＳＴＥＮ状態から来た）場合、この接続をＬＩＳＴＥＮ状態に戻して戻る。 ユーザーに通知する必要はありません。 この接続がアクティブＯＰＥＮで開始された（すなわち、ＳＹＮ − ＳＥＮＴ状態から来た）場合、接続は拒否され、ユーザに「接続拒否」と合図する。 どちらの場合でも、再送信キューのすべてのセグメントを削除する必要があります。 アクティブOPENの場合は、CLOSED状態に入り、TCBを削除して戻ります。
+
+```
+      ESTABLISHED
+      FIN-WAIT-1
+      FIN-WAIT-2
+      CLOSE-WAIT
+```
+
+>If the RST bit is set then, any outstanding RECEIVEs and SEND should receive "reset" responses.  All segment queues should be flushed.  Users should also receive an unsolicited general "connection reset" signal.  Enter the CLOSED state, delete the TCB, and return.
+
+RSTビットが設定されているなら、どんな未解決のRECEIVEsとSENDも "リセット"応答を受けるべきです。 すべてのセグメントキューをフラッシュする必要があります。 ユーザはまた、求められていない一般的な「接続リセット」信号を受け取るべきです。 CLOSED状態に入り、TCBを削除して返す。
+
+```
+      CLOSING STATE
+      LAST-ACK STATE
+      TIME-WAIT
+```
+
+>If the RST bit is set then, enter the CLOSED state, delete the TCB, and return.
+
+RSTビットが設定されている場合は、CLOSED状態に入り、TCBを削除して戻ります。
+
+>third check security and precedence
+
+3番目にsecurityとprecedenceをチェックし
+
+```
+      SYN-RECEIVED
+```
+
+>If the security/compartment and precedence in the segment do not exactly match the security/compartment and precedence in the TCB then send a reset, and return.
+
+セグメント内のセキュリティ/コンパートメントと優先順位がTCBのセキュリティ/コンパートメントと優先順位と完全に一致しない場合は、リセットを送信して戻ります。
+
+```
+      ESTABLISHED STATE
+```
+
+>If the security/compartment and precedence in the segment do not exactly match the security/compartment and precedence in the TCB then send a reset, any outstanding RECEIVEs and SEND should receive "reset" responses.  All segment queues should be flushed.  Users should also receive an unsolicited general "connection reset" signal.  Enter the CLOSED state, delete the TCB, and return.
+
+セグメント内のセキュリティ/コンパートメントおよび優先順位がTCB内のセキュリティ/コンパートメントおよび優先順位と完全に一致しない場合、リセットを送信すると、未解決のRECEIVEおよびSENDが「リセット」応答を受信するはずです。 すべてのセグメントキューをフラッシュする必要があります。 ユーザはまた、求められていない一般的な「接続リセット」信号を受け取るべきです。 CLOSED状態に入り、TCBを削除してから戻ってください。
+
+>Note this check is placed following the sequence check to prevent a segment from an old connection between these ports with a different security or precedence from causing an abort of the current connection.
+
+セキュリティまたは優先順位が異なるこれらのポート間の古い接続からのセグメントが現在の接続を中断させないようにするために、このチェックはシーケンスチェックの後に配置されます。
+
+>fourth, check the SYN bit,
+
+4番目にSYNbitをチェックし
+
+```
+      SYN-RECEIVED
+      ESTABLISHED STATE
+      FIN-WAIT STATE-1
+      FIN-WAIT STATE-2
+      CLOSE-WAIT STATE
+      CLOSING STATE
+      LAST-ACK STATE
+      TIME-WAIT STATE
+```
+
+>If the SYN is in the window it is an error, send a reset, any outstanding RECEIVEs and SEND should receive "reset" responses, all segment queues should be flushed, the user should also receive an unsolicited general "connection reset" signal, enter the CLOSED state, delete the TCB, and return.
+
+ＳＹＮがウィンドウ内にある場合、それはエラーであり、リセットを送り、未解決のＲＥＣＥＩＶＥおよびＳＥＮＤは「リセット」応答を受け取るべきであり、すべてのセグメント待ち行列はフラッシュされるべきであり、ユーザは求められない一般的な「接続リセット」信号も受け取るべきである。 CLOSED状態、TCBを削除して戻ります。
+
+>If the SYN is not in the window this step would not be reached and an ack would have been sent in the first step (sequence number check).
+
+SYNがウィンドウ内にない場合、このステップには到達せず、最初のステップでackが送信されたはずです（シーケンス番号チェック）。
+
+>fifth check the ACK field,
+
+5番目にSCKをチェックし
+
+>if the ACK bit is off drop the segment and return
+
+ACKビットがオフの場合、そのセグメントをドロップして戻ります。
+
+>if the ACK bit is on
+
+ACKbitがオンなら
+
+```
+        SYN-RECEIVED STATE
+```
+
+>If SND.UNA =< SEG.ACK =< SND.NXT then enter ESTABLISHED state and continue processing.
+
+SND.UNA =< SEG.ACK =< SND.NXTの場合、ESTABLISHED状態に入り、処理を続行します。
+
+>If the segment acknowledgment is not acceptable, form a reset segment,
+
+セグメントの確認応答が受け入れられない場合は、リセットセグメントを作成してください。
+
+```
+              <SEQ=SEG.ACK><CTL=RST>
+```
+
+>and send it.
+
+送信する
+
+```
+        ESTABLISHED STATE
+```
+
+>If SND.UNA < SEG.ACK =< SND.NXT then, set SND.UNA <- SEG.ACK. Any segments on the retransmission queue which are thereby entirely acknowledged are removed.  Users should receive positive acknowledgments for buffers which have been SENT and fully acknowledged (i.e., SEND buffer should be returned with "ok" response).  If the ACK is a duplicate (SEG.ACK < SND.UNA), it can be ignored.  If the ACK acks something not yet sent (SEG.ACK > SND.NXT) then send an ACK, drop the segment, and return.
+
+ＳＮＤ．ＵＮＡ ＜ＳＥＧ．ＡＣＫ ＝ ＜ＳＮＤ．ＮＸＴであれば、ＳＮＤ．ＵＮＡ ＜ -  ＳＥＧ．ＡＣＫを設定する。 それによって完全に確認応答される再送信キュー上のいかなるセグメントも除去される。 ユーザは、送信済みで完全に承認されたバッファについて肯定的な承認を受け取るべきである（すなわち、「送信」バッファは「OK」応答で返されるべきである）。 ACKが重複している場合（SEG.ACK < SND.UNA）、無視することができます。 ACKがまだ送信されていないものを確認した場合（SEG.ACK > SND.N XT）、ACKを送信し、セグメントをドロップして戻ります。
+
+>If SND.UNA < SEG.ACK =< SND.NXT, the send window should be updated.  If (SND.WL1 < SEG.SEQ or (SND.WL1 = SEG.SEQ and SND.WL2 =< SEG.ACK)), set SND.WND <- SEG.WND, set SND.WL1 <- SEG.SEQ, and set SND.WL2 <- SEG.ACK.
+
+SND.UNA < SEG.ACK =< SND.NXTの場合は、送信ウィンドウを更新する必要があります。 （SND.WL1 < SEG.SEQまたは（SND.WL1 = SEG.SEQかつSND.WL2 =< SEG.ACK））の場合、SND.WND <-  SEG.WNDを設定し、SND.WL1 <-  SEG.SEQを設定してください。 SND.WL2 <-  SEG.ACKを設定します。
+
+>Note that SND.WND is an offset from SND.UNA, that SND.WL1 records the sequence number of the last segment used to update SND.WND, and that SND.WL2 records the acknowledgment number of the last segment used to update SND.WND.  The check here prevents using old segments to update the window.
+
+SND.WNDはSND.UNAからのオフセットであり、SND.WL1はSND.WNDの更新に使用された最後のセグメントのシーケンス番号を記録し、SND.WL2はSND.WNDの更新に使用された最後のセグメントの確認応答番号を記録します。  ここのチェックはウィンドウを更新するために古いセグメントを使用することを防ぎます。
+
+```
+        FIN-WAIT-1 STATE
+```
+
+>In addition to the processing for the ESTABLISHED state, if our FIN is now acknowledged then enter FIN-WAIT-2 and continue processing in that state.
+
+ESTABLISHED状態の処理に加えて、現在のFINが確認された場合は、FIN-WAIT-2を入力してその状態で処理を続行します。
+
+```
+        FIN-WAIT-2 STATE
+```
+
+>In addition to the processing for the ESTABLISHED state, if the retransmission queue is empty, the user's CLOSE can be acknowledged ("ok") but do not delete the TCB.
+
+ESTABLISHED状態の処理に加えて、再送信キューが空の場合、ユーザーのCLOSEは確認応答されます（「ok」）が、TCBは削除されません。
+
+```
+        CLOSE-WAIT STATE
+```
+
+>Do the same processing as for the ESTABLISHED state.
+
+ESTABLISHED状態と同じ処理を行います。
+
+```
+        CLOSING STATE
+```
+
+>In addition to the processing for the ESTABLISHED state, if the ACK acknowledges our FIN then enter the TIME-WAIT state, otherwise ignore the segment.
+
+ＥＳＴＡＢＬＩＳＨＥＤ状態に対する処理に加えて、ＡＣＫが我々のＦＩＮを確認するならばＴＩＭＥ − ＷＡＩＴ状態に入り、そうでなければセグメントを無視する。
+
+```
+        LAST-ACK STATE
+```
+
+>The only thing that can arrive in this state is an acknowledgment of our FIN.  If our FIN is now acknowledged, delete the TCB, enter the CLOSED state, and return.
+
+この状態にたどり着くことができる唯一のものは私たちのFINの承認です。 FINが承認されたら、TCBを削除してCLOSED状態に入り、そして戻ります。
+
+```
+        TIME-WAIT STATE
+```
+
+>The only thing that can arrive in this state is a retransmission of the remote FIN.  Acknowledge it, and restart the 2 MSL timeout.
+
+この状態にたどり着くことができる唯一のものは、リモートFINの再送信です。 それを確認して、2 MSLタイムアウトを再開してください。
+
+>sixth, check the URG bit,
+
+6番目にURGbitをチェックして
+
+```
+      ESTABLISHED STATE
+      FIN-WAIT-1 STATE
+      FIN-WAIT-2 STATE
+```
+
+>If the URG bit is set, RCV.UP <- max(RCV.UP,SEG.UP), and signal the user that the remote side has urgent data if the urgent pointer (RCV.UP) is in advance of the data consumed.  If the user has already been signaled (or is still in the "urgent mode") for this continuous sequence of urgent data, do not signal the user again.
+
+URGビットが設定されている場合、RCV.UP < -  max（RCV.UP、SEG.UP）であり、緊急ポインタ（RCV.UP）が消費されたデータより早い場合、リモート側に緊急データがあることをユーザーに知らせます。 。 ユーザーがこの緊急データの連続シーケンスについてすでに通知されている（またはまだ「緊急モード」になっている）場合は、再度ユーザーに通知しないでください。
+
+```
+      CLOSE-WAIT STATE
+      CLOSING STATE
+      LAST-ACK STATE
+      TIME-WAIT
+```
+
+>This should not occur, since a FIN has been received from the remote side.  Ignore the URG.
+
+リモート側からFINが受信されたため、これは発生しません。 URGを無視してください。
+
+>seventh, process the segment text,
+
+7番目に、セグメントテキストを処理します。
+
+```
+      ESTABLISHED STATE
+      FIN-WAIT-1 STATE
+      FIN-WAIT-2 STATE
+```
+
+>Once in the ESTABLISHED state, it is possible to deliver segment text to user RECEIVE buffers.  Text from segments can be moved into buffers until either the buffer is full or the segment is empty.  If the segment empties and carries an PUSH flag, then the user is informed, when the buffer is returned, that a PUSH has been received.
+
+ESTABLISHED状態になると、セグメントテキストをユーザーのRECEIVEバッファーに配信することが可能になります。 セグメントからのテキストは、バッファがいっぱいになるかセグメントが空になるまでバッファに移動できます。 セグメントがプッシュフラグを空にして伝送する場合、バッファが返されると、プッシュが受信されたことがユーザに通知されます。
+
+>When the TCP takes responsibility for delivering the data to the user it must also acknowledge the receipt of the data.
+
+TCPがユーザーにデータを配信する責任を負うとき、TCPはデータの受信を確認応答する必要があります。
+
+>Once the TCP takes responsibility for the data it advances RCV.NXT over the data accepted, and adjusts RCV.WND as apporopriate to the current buffer availability.  The total of RCV.NXT and RCV.WND should not be reduced.
+
+TCPがデータに責任を持つと、受け入れたデータよりもRCV.NXTを進め、現在のバッファの可用性に応じてRCV.WNDを調整します。 RCV.NXTとRCV.WNDの合計を減らすべきではありません。
+
+>Please note the window management suggestions in section 3.7.
+
+セクション3.7のウィンドウ管理の提案に注意してください。
+
+>Send an acknowledgment of the form:
+
+フォームの確認を送信します。
+
+```
+          <SEQ=SND.NXT><ACK=RCV.NXT><CTL=ACK>
+```
+
+>This acknowledgment should be piggybacked on a segment being transmitted if possible without incurring undue delay.
+
+この確認応答は、可能であれば、過度の遅延を招くことなく送信されているセグメントに便乗する必要があります。
+
+```
+      CLOSE-WAIT STATE
+      CLOSING STATE
+      LAST-ACK STATE
+      TIME-WAIT STATE
+```
+
+>This should not occur, since a FIN has been received from the remote side.  Ignore the segment text.
+
+リモート側からFINが受信されたため、これは発生しません。 セグメントテキストを無視します。
+
+>eighth, check the FIN bit,
+
+8番目にFINbitをチェックし
+
+>Do not process the FIN if the state is CLOSED, LISTEN or SYN-SENT since the SEG.SEQ cannot be validated; drop the segment and return.
+
+SEG.SEQは検証できないため、状態がCLOSED、LISTEN、またはSYN-SENTの場合は、FINを処理しません。 セグメントを削除して戻ります。
+
+>If the FIN bit is set, signal the user "connection closing" and return any pending RECEIVEs with same message, advance RCV.NXT over the FIN, and send an acknowledgment for the FIN.  Note that FIN implies PUSH for any segment text not yet delivered to the user.
+
+FINビットが設定されているなら、ユーザに "接続終了"を知らせて、同じメッセージでどんな未定のRECEIVEも返してください、そして、FINの上にRCV.NXTを進めてください、そして、FINのために承認を送ってください。 FINは、まだユーザーに配信されていないセグメントテキストに対してPUSHを意味することに注意してください。
+
+```
+        SYN-RECEIVED STATE
+        ESTABLISHED STATE
+```
+
+>Enter the CLOSE-WAIT state.
+
+CLOSE-WAIT状態に入る
+
+```
+        FIN-WAIT-1 STATE
+```
+
+>If our FIN has been ACKed (perhaps in this segment), then enter TIME-WAIT, start the time-wait timer, turn off the other timers; otherwise enter the CLOSING state.
+
+私たちのFINが（おそらくこのセグメントで）ACKされているならば、それからTIME-WAITを入力し、時間待ちタイマーをスタートさせ、他のタイマーをオフにします。 それ以外の場合はCLOSING状態に入ります。
+
+```
+        FIN-WAIT-2 STATE
+```
+
+>Enter the TIME-WAIT state.  Start the time-wait timer, turn off the other timers.
+
+TIME-WAIT状態に入ります。 時間待ちタイマーを始動し、他のタイマーをオフにします。
+
+```
+        CLOSE-WAIT STATE
+```
+
+>Remain in the CLOSE-WAIT state.
+
+CLOSE-WAIT状態のままになります。
+
+```
+        CLOSING STATE
+```
+
+>Remain in the CLOSING state.
+
+CLOSING状態のままになります。
+
+```
+        LAST-ACK STATE
+```
+
+>Remain in the LAST-ACK state.
+
+LAST-ACK状態のままになります。
+
+```
+        TIME-WAIT STATE
+```
+
+>Remain in the TIME-WAIT state.  Restart the 2 MSL time-wait timeout.
+
+TIME-WAIT状態のままにします。 2 MSLの待ち時間タイムアウトを再開します。
+
+>and return.
+
+return
+
+```
+  USER TIMEOUT
+```
+
+>For any state if the user timeout expires, flush all queues, signal the user "error:  connection aborted due to user timeout" in general and for any outstanding calls, delete the TCB, enter the CLOSED state and return.
+
+ユーザタイムアウトが期限切れになった場合はどの状態でも、すべてのキューをフラッシュし、一般に「エラー：ユーザタイムアウトが原因で接続が中断されました」というシグナルを出します。そして未解決の呼び出しに対してはTCBを削除し、CLOSED状態に入って戻ります。
+
+```
+  RETRANSMISSION TIMEOUT
+```
+
+>For any state if the retransmission timeout expires on a segment in the retransmission queue, send the segment at the front of the retransmission queue again, reinitialize the retransmission timer, and return.
+
+再送信タイムアウトが再送信キュー内のセグメントで期限切れになった場合は、どの状態でも、そのセグメントを再送信キューの先頭に再送信し、再送信タイマーを再初期化してから戻ります。
+
+```
+  TIME-WAIT TIMEOUT
+```
+
+>If the time-wait timeout expires on a connection delete the TCB, enter the CLOSED state and return.
+
+接続のタイムアウト待ち時間が経過してTCBを削除した場合は、CLOSED状態に入り、戻ります。
 
 
 
